@@ -1,0 +1,12 @@
+# built documents and LaTeX intermediates
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.xdv
+*.fff
+*.lof
+*.ttt
