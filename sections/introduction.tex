@@ -1,55 +1,80 @@
 \section{Introduction}\label{sec:introduction}
 
-The pilot of a remotely operated vehicle (ROV) works through a camera. Water takes
-the red from the picture, scatters light into the line of sight and lowers contrast
+The pilot of a remotely operated vehicle (ROV) works through a
+camera. Water takes
+the red from the picture, scatters light into the line of sight and
+lowers contrast
 with distance \cite{jaffe1990,schettini2010}, and the vehicle's own lights are
-scattered back at the camera \cite{abdullah2026}; whatever is done to the picture to
-compensate must be done between the camera and the pilot without holding it back,
+scattered back at the camera \cite{abdullah2026}; whatever is done to
+the picture to
+compensate must be done between the camera and the pilot without
+holding it back,
 because delay in the picture degrades visually guided work
-\cite{mackenzie1993,nankaku2022,chen2007}. Small inspection-class vehicles carry a
-single-board computer, an autopilot and an Ethernet tether \cite{vonbenzon2022}, and
+\cite{mackenzie1993,nankaku2022,chen2007}. Small inspection-class
+vehicles carry a
+single-board computer, an autopilot and an Ethernet tether
+\cite{vonbenzon2022}, and
 that computer is the place where such processing has to fit.
 
-Three bodies of work bear on this, and Section~\ref{sec:related} reviews them. Image
-enhancement for underwater pictures is a large field whose recent methods are learned
+Three bodies of work bear on this, and Section~\ref{sec:related}
+reviews them. Image
+enhancement for underwater pictures is a large field whose recent
+methods are learned
 and run in real time on graphics processors at low resolution; the model-free
 operators that are cheap enough for a small processor can flicker when their
-parameters are estimated anew for every frame, and the remedies for flicker are not real-time.
-Video pipelines built from standard parts report delays of 60 to 200~ms from encoder
-to decoder or from scene to display, of which the instrumented stages explain a few
+parameters are estimated anew for every frame, and the remedies for
+flicker are not real-time.
+Video pipelines built from standard parts report delays of 60 to
+200~ms from encoder
+to decoder or from scene to display, of which the instrumented stages
+explain a few
 milliseconds; for a small ROV observed through a network camera, 850~ms has been
 measured \cite{kaknjo2018}. And vehicles that add perception pass frames between
 processes through robotics middleware, whose cost for messages of the size of an
-image has been measured on single-board computers and is high, or send the video to
+image has been measured on single-board computers and is high, or
+send the video to
 the surface and process it there.
 
 This paper describes electric-eye, open-source software in two programs for the
 video of an ROV between its camera and its pilot, and makes the following
 contributions.
 \begin{itemize}
-  \item A continuous visibility correction for the pilot's picture (cast removal,
-    contrast stretch and local histogram equalization) whose parameters, rather than
-    its pixels, are smoothed over time, at 0.55~ms per 1280$\times$720 frame on a
+  \item A continuous visibility correction for the pilot's picture
+    (cast removal,
+    contrast stretch and local histogram equalization) whose
+    parameters, rather than
+    its pixels, are smoothed over time, at 0.55~ms per
+    1280$\times$720 frame on a
     desktop processor, beside a chain of image operators with NEON and
-    multi-threaded paths that are required to reproduce the scalar output byte for
+    multi-threaded paths that are required to reproduce the scalar
+    output byte for
     byte (Sections~\ref{sec:operators} and~\ref{sec:autovis}).
   \item A frame bus in shared memory with a documented layout, through which any
     program on the machine reads the camera's frame and the pilot's picture with
     their capture times, and whose writer never waits for a reader
     (Section~\ref{sec:bus}).
-  \item A transport of the video across the tether as H.264 over RTP in which two
-    changes at the receiver, neither of them to the encoder or the network, reduced
-    the latency from bus to bus over loopback from 70.4 to 3.8~ms at 640$\times$480
-    and from 74.8 to 8.3~ms at 1280$\times$720; and the option to send a camera's
+  \item A transport of the video across the tether as H.264 over RTP
+    in which two
+    changes at the receiver, neither of them to the encoder or the
+    network, reduced
+    the latency from bus to bus over loopback from 70.4 to 3.8~ms at
+    640$\times$480
+    and from 74.8 to 8.3~ms at 1280$\times$720; and the option to
+    send a camera's
     own H.264 with no encoder on the vehicle (Section~\ref{sec:transport}).
   \item The freedom to run the image processing on the vehicle or at the surface
     with the same programs (Section~\ref{sec:overview}).
 \end{itemize}
-The measurements are from the bench. The software has not yet been run on a vehicle,
-the visibility correction has been evaluated on synthetic frames only, and no pilot
-has been studied; Section~\ref{sec:discussion} returns to what follows from that.
+The measurements are from the bench. The software has not yet been
+run on a vehicle,
+the visibility correction has been evaluated on synthetic frames
+only, and no pilot
+has been studied; Section~\ref{sec:discussion} returns to what
+follows from that.
 
-Section~\ref{sec:related} reviews related work, Section~\ref{sec:methods} describes
+Section~\ref{sec:related} reviews related work,
+Section~\ref{sec:methods} describes
 the design and the methods of verification and measurement,
-Section~\ref{sec:results} gives the results, Section~\ref{sec:discussion} discusses
+Section~\ref{sec:results} gives the results,
+Section~\ref{sec:discussion} discusses
 them, and Section~\ref{sec:conclusion} concludes.

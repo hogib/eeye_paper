@@ -1,64 +1,100 @@
 \subsection{Image operators}\label{sec:operators}
 
-The operator chain holds up to eight stages applied in order; Table~\ref{tab:operators}
+The operator chain holds up to eight stages applied in order;
+Table~\ref{tab:operators}
 lists the operators. Point operators (grayscale, invert, threshold, tint, light)
-are composed into one 256-entry lookup table per plane for each run of consecutive
-point stages, so that a run costs one pass over the frame whatever its length. The
-neighbourhood operators read 3$\times$3 or 5-sample neighbourhoods and replicate the
-border samples, because zero padding would produce a false response along the frame
+are composed into one 256-entry lookup table per plane for each run
+of consecutive
+point stages, so that a run costs one pass over the frame whatever
+its length. The
+neighbourhood operators read 3$\times$3 or 5-sample neighbourhoods
+and replicate the
+border samples, because zero padding would produce a false response
+along the frame
 edge.
 
 The Gaussian blur repeats a separable binomial kernel,
 \begin{equation}\label{eq:blur}
-  g(x) = \left\lfloor \frac{p_{x-2} + 4p_{x-1} + 6p_x + 4p_{x+1} + p_{x+2} + 8}{16}
+  g(x) = \left\lfloor \frac{p_{x-2} + 4p_{x-1} + 6p_x + 4p_{x+1} +
+  p_{x+2} + 8}{16}
   \right\rfloor ,
 \end{equation}
-horizontally and then vertically, $s$ times for strength $s$; repeated passes widen
-the effective Gaussian as $\sqrt{s}$. Each thread computes its own band of output rows
-in a single sweep, keeping the five horizontally filtered rows it needs in a rolling
-window, and successive passes alternate between the destination and a scratch plane,
-which needs one synchronization of the thread team per pass where filtering in place
-needs two. From $s = 4$ the passes run at half resolution: the plane is reduced by
-2$\times$2 averaging, blurred, and expanded by bilinear interpolation with weights
+horizontally and then vertically, $s$ times for strength $s$;
+repeated passes widen
+the effective Gaussian as $\sqrt{s}$. Each thread computes its own
+band of output rows
+in a single sweep, keeping the five horizontally filtered rows it
+needs in a rolling
+window, and successive passes alternate between the destination and a
+scratch plane,
+which needs one synchronization of the thread team per pass where
+filtering in place
+needs two. From $s = 4$ the passes run at half resolution: the plane
+is reduced by
+2$\times$2 averaging, blurred, and expanded by bilinear interpolation
+with weights
 $\tfrac34$ and $\tfrac14$.
 
-Sobel \cite{duda1973} computes the gradients $G_x$ and $G_y$ of the 3$\times$3 Sobel
+Sobel \cite{duda1973} computes the gradients $G_x$ and $G_y$ of the
+3$\times$3 Sobel
 kernels and outputs $\min(|G_x| + |G_y|, 255)$, set to zero below a threshold.
 The Laplacian-of-Gaussian operator \cite{marr1980} blurs with
-Eq.~\eqref{eq:blur}, takes the 4-neighbour Laplacian in 16-bit signed arithmetic and
-marks a pixel where the response changes sign towards its right or lower neighbour by
-at least a threshold; comparing in two directions only keeps contours one pixel wide,
+Eq.~\eqref{eq:blur}, takes the 4-neighbour Laplacian in 16-bit signed
+arithmetic and
+marks a pixel where the response changes sign towards its right or
+lower neighbour by
+at least a threshold; comparing in two directions only keeps contours
+one pixel wide,
 and the slope test rejects noise that merely grazes zero. Canny's detector
-\cite{canny1986} is implemented in four stages: at least one blur pass, which keeps
-the cost of hysteresis bounded on noisy input; the Sobel gradient, with its direction
+\cite{canny1986} is implemented in four stages: at least one blur
+pass, which keeps
+the cost of hysteresis bounded on noisy input; the Sobel gradient,
+with its direction
 quantized to four sectors by integer comparisons ($|G_y| < 0.4|G_x|$ horizontal,
-$|G_y| > 2.4|G_x|$ vertical, otherwise diagonal by the signs of $G_x$ and $G_y$);
-non-maximum suppression, keeping a pixel when it is not below one neighbour across the
-edge and strictly above the other, which thins a symmetric ridge to one pixel; and
-hysteresis. Suppression labels each pixel directly in the output, as a seed when its
-magnitude reaches the high threshold and as a candidate when it reaches the low one;
-each row's seeds are collected as it is labelled; a serial flood fill from the seeds
-promotes connected candidates, and a final parallel pass clears the candidates it did
-not reach. The flood fill gives the exact connected set, which a parallel sweep would
+  $|G_y| > 2.4|G_x|$ vertical, otherwise diagonal by the signs of $G_x$
+and $G_y$);
+non-maximum suppression, keeping a pixel when it is not below one
+neighbour across the
+edge and strictly above the other, which thins a symmetric ridge to
+one pixel; and
+hysteresis. Suppression labels each pixel directly in the output, as
+a seed when its
+magnitude reaches the high threshold and as a candidate when it
+reaches the low one;
+each row's seeds are collected as it is labelled; a serial flood fill
+from the seeds
+promotes connected candidates, and a final parallel pass clears the
+candidates it did
+not reach. The flood fill gives the exact connected set, which a
+parallel sweep would
 only approximate.
 
-The edge operators output luma only and set the chroma planes to the neutral value
-128. A pass that computes chroma no later stage will read (a blur, tint or contrast
-stretch before an edge operator, for example) is skipped; the stages after the last
-one that writes chroma are traced back once per configuration. When a chain's output
-chroma is known to be neutral, the frame is marked and the frame bus copies only luma
+The edge operators output luma only and set the chroma planes to the
+neutral value
+128. A pass that computes chroma no later stage will read (a blur,
+  tint or contrast
+stretch before an edge operator, for example) is skipped; the stages
+after the last
+one that writes chroma are traced back once per configuration. When a
+chain's output
+chroma is known to be neutral, the frame is marked and the frame bus
+copies only luma
 (Section~\ref{sec:bus}).
 
-The neighbourhood operators have NEON implementations, written with intrinsics that
+The neighbourhood operators have NEON implementations, written with
+intrinsics that
 exist on both ARMv7 and AArch64, and portable scalar versions that the compiler
 vectorizes on x86. Loops are parallelized with OpenMP \cite{dagum1998}; every
-parallel loop is free of data races, so that it is also correct without OpenMP. Each
-vector or parallel path was required to produce output byte-identical to the scalar
+parallel loop is free of data races, so that it is also correct
+without OpenMP. Each
+vector or parallel path was required to produce output byte-identical
+to the scalar
 single-threaded path (Section~\ref{sec:verification}).
 
 \begin{table*}[!t]
   \centering\small
-  \caption{Image operators of the chain. All parameters are integers from 0 to 255.}\label{tab:operators}
+  \caption{Image operators of the chain. All parameters are integers
+  from 0 to 255.}\label{tab:operators}
   \setlength{\tabcolsep}{4pt}
   \begin{tabular}{@{}lL{4.2cm}L{6.4cm}l@{}}
     \toprule
@@ -67,16 +103,23 @@ single-threaded path (Section~\ref{sec:verification}).
     grayscale & -- & chroma set to 128 & UV \\
     invert & -- & $Y \leftarrow 255 - Y$ & Y \\
     threshold & level (0) & $Y \leftarrow 255$ if $Y \geq$ level, else 0 & Y \\
-    tint & $u$, $v$, strength (0) & chroma moved towards ($u$, $v$) by strength/255 & UV \\
-    light & level (128) & $Y \leftarrow Y + \text{level} - 128$; chroma scaled about 128 by level/128 & YUV \\
+    tint & $u$, $v$, strength (0) & chroma moved towards ($u$, $v$)
+    by strength/255 & UV \\
+    light & level (128) & $Y \leftarrow Y + \text{level} - 128$;
+    chroma scaled about 128 by level/128 & YUV \\
     contrast & -- & per-frame min/max stretch of $Y$ to 0--255 & Y \\
-    blur & strength $s$ (0, one pass) & Eq.~\eqref{eq:blur}, $s$ passes; half resolution from $s = 4$ & YUV \\
-    sobel & threshold (0) & $\min(|G_x|+|G_y|, 255)$, zero below threshold & Y; UV $\leftarrow$ 128 \\
-    log & strength (0, one pass), threshold (0) & blur, 4-neighbour Laplacian, zero-crossings with slope test & Y; UV $\leftarrow$ 128 \\
-    canny & strength (0, one pass), low (40), high (90) & blur, gradient, suppression, hysteresis & Y; UV $\leftarrow$ 128 \\
+    blur & strength $s$ (0, one pass) & Eq.~\eqref{eq:blur}, $s$
+    passes; half resolution from $s = 4$ & YUV \\
+    sobel & threshold (0) & $\min(|G_x|+|G_y|, 255)$, zero below
+    threshold & Y; UV $\leftarrow$ 128 \\
+    log & strength (0, one pass), threshold (0) & blur, 4-neighbour
+    Laplacian, zero-crossings with slope test & Y; UV $\leftarrow$ 128 \\
+    canny & strength (0, one pass), low (40), high (90) & blur,
+    gradient, suppression, hysteresis & Y; UV $\leftarrow$ 128 \\
     \bottomrule
   \end{tabular}
-  \tablenote{Consecutive point operators (the first five rows) are fused into one lookup
+  \tablenote{Consecutive point operators (the first five rows) are
+    fused into one lookup
     table per plane. The image statistics and the visibility correction of
-    Section~\ref{sec:autovis} run before the chain and are not chain stages.}
+  Section~\ref{sec:autovis} run before the chain and are not chain stages.}
 \end{table*}

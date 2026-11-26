@@ -1,33 +1,52 @@
 \subsection{Image acquisition}\label{sec:capture}
 
-\eeye{} captures from a USB (UVC) camera through V4L2 \cite{v4l2} with memory-mapped
+\eeye{} captures from a USB (UVC) camera through V4L2 \cite{v4l2}
+with memory-mapped
 streaming, or from a Raspberry Pi camera module through a \texttt{rpicam-vid}
 \cite{rpicamapps} child process; a third source reads a frame bus stream
-(placement~A). On V4L2 it takes MJPEG when the camera offers it at the requested size
-and packed 4:2:2 (YUYV) otherwise, because at USB~2.0 bandwidth most cameras offer
-720p only as MJPEG. When the requested size is not offered, the closest mode is chosen
-by aspect ratio first and pixel count second, once at startup, since all frame buffers
-are allocated at that size. MJPEG is decoded with libjpeg-turbo \cite{libjpegturbo}
-directly into 4:2:2 planes; an optional downscale by 2, 4 or 8 is applied inside the
-decoder (by dropping DCT coefficients) or, for YUYV, while the packed samples are
+(placement~A). On V4L2 it takes MJPEG when the camera offers it at
+the requested size
+and packed 4:2:2 (YUYV) otherwise, because at USB~2.0 bandwidth most
+cameras offer
+720p only as MJPEG. When the requested size is not offered, the
+closest mode is chosen
+by aspect ratio first and pixel count second, once at startup, since
+all frame buffers
+are allocated at that size. MJPEG is decoded with libjpeg-turbo
+\cite{libjpegturbo}
+directly into 4:2:2 planes; an optional downscale by 2, 4 or 8 is
+applied inside the
+decoder (by dropping DCT coefficients) or, for YUYV, while the packed
+samples are
 deinterleaved.
 
-Every frame is held as planar I422 at full range (0--255 for luma and chroma, the range
-the operators assume \cite{itu_bt601}). It carries a frame number and its capture
+Every frame is held as planar I422 at full range (0--255 for luma and
+  chroma, the range
+the operators assume \cite{itu_bt601}). It carries a frame number and
+its capture
 time on \texttt{CLOCK\_MONOTONIC}: the driver's buffer timestamp when the driver
-stamps that clock, otherwise the time of receipt. Each capture takes, after the first
+stamps that clock, otherwise the time of receipt. Each capture takes,
+after the first
 ready buffer, every further buffer the driver has filled, returns the older ones
-unread and decodes only the newest; when all buffers fill, the V4L2 driver keeps the
+unread and decodes only the newest; when all buffers fill, the V4L2
+driver keeps the
 oldest frames and drops new ones, and without this a single slow frame left the
 picture permanently several frames behind.
 
-Camera controls (exposure, gain, white balance, brightness, contrast, saturation,
-sharpness) are expressed in device-independent units, percentages of the device's
-reported range or physical units (exposure in microseconds, white balance in kelvin),
-and are mapped onto each camera's own range. A field left out leaves that control
+Camera controls (exposure, gain, white balance, brightness, contrast,
+  saturation,
+sharpness) are expressed in device-independent units, percentages of
+the device's
+reported range or physical units (exposure in microseconds, white
+balance in kelvin),
+and are mapped onto each camera's own range. A field left out leaves
+that control
 untouched. One control is set by default: the V4L2 control that lets automatic
-exposure lengthen the shutter beyond the frame period is turned off, because with it
-on the laptop camera used for testing (Section~\ref{sec:verification}) fell from 30 to
+exposure lengthen the shutter beyond the frame period is turned off,
+because with it
+on the laptop camera used for testing
+(Section~\ref{sec:verification}) fell from 30 to
 17~frames per second in a dim room, and every later stage inherits the rate. In
-placement~A the controls travel from the topside to the vehicle's \hellion{}, which
+placement~A the controls travel from the topside to the vehicle's
+\hellion{}, which
 holds the camera, applies them, and keeps them for its next start.

@@ -1,57 +1,78 @@
 \subsection{Processing threads and buffers}\label{sec:threads}
 
-Inside \eeye{} a producer thread captures, an effects thread runs the operators, and
-a consumer thread publishes (Figure~\ref{fig:eeye}). The threads pass frames through
-three ring buffers of 32 slots, and frames come from a pool of eight that is allocated
-once and never grows, so that the pool size bounds the lag between capture and output
-(eight frames, 267~ms at 30~frames per second). Each frame has three planar buffers:
+Inside \eeye{} a producer thread captures, an effects thread runs the
+operators, and
+a consumer thread publishes (Figure~\ref{fig:eeye}). The threads pass
+frames through
+three ring buffers of 32 slots, and frames come from a pool of eight
+that is allocated
+once and never grows, so that the pool size bounds the lag between
+capture and output
+(eight frames, 267~ms at 30~frames per second). Each frame has three
+planar buffers:
 the untouched capture (\emph{raw}), the working image, and a spare that lets two
 consecutive neighbourhood operators alternate without copying.
 
-The configuration is a JSON file that a watcher thread reloads within milliseconds of
-any change (inotify). A parsed configuration is published by an atomic pointer swap,
-and the effects thread takes one snapshot per frame, so that no frame is processed
-with two configurations. After every load \eeye{} writes whether it accepted the file;
-\hellion{}, which writes the file for the browser page, waits for that verdict and
-puts the previous file back when the new one is refused. Once a second the consumer
-assembles a health record (capture state, frame count, recording state and the image
-statistics of Section~\ref{sec:autovis}); the stats thread writes it, so that file
+The configuration is a JSON file that a watcher thread reloads within
+milliseconds of
+any change (inotify). A parsed configuration is published by an
+atomic pointer swap,
+and the effects thread takes one snapshot per frame, so that no frame
+is processed
+with two configurations. After every load \eeye{} writes whether it
+accepted the file;
+\hellion{}, which writes the file for the browser page, waits for
+that verdict and
+puts the previous file back when the new one is refused. Once a
+second the consumer
+assembles a health record (capture state, frame count, recording
+  state and the image
+statistics of Section~\ref{sec:autovis}); the stats thread writes it,
+so that file
 input/output on the vehicle's SD card cannot stall the thread that publishes the
 pilot's picture.
 
 \begin{figure*}[!t]
   \centering
   \begin{adjustbox}{max width=\linewidth}
-  \begin{tikzpicture}[node distance=5mm and 6mm]
-    \node[ext] (cam) {camera or\\frame bus};
-    \node[proc, right=of cam] (prod) {producer\\capture, decode};
-    \node[buf, right=of prod] (rin) {ring\\\emph{in}};
-    \node[proc, right=of rin, text width=34mm] (eff) {effects\\image statistics\\visibility correction\\operator chain};
-    \node[buf, right=of eff] (rout) {ring\\\emph{out}};
-    \node[proc, right=of rout] (cons) {consumer\\publish};
-    \node[buf, below=9mm of eff] (rfree) {ring \emph{free}\\pool of 8 frames};
-    \node[buf, right=11mm of cons, yshift=7mm] (bus) {frame bus\\\emph{pilot}, \emph{raw}};
-    \node[ext, right=11mm of cons, yshift=-7mm] (out) {webcam device,\\raw recording};
-    \node[proc, above=7mm of eff] (cfg) {config watcher};
-    \node[ext, left=8mm of cfg] (file) {effects.json};
-    \node[proc, above=7mm of cons] (stats) {stats\\health file};
-    \draw[flow] (cam) -- (prod);
-    \draw[flow] (prod) -- (rin);
-    \draw[flow] (rin) -- (eff);
-    \draw[flow] (eff) -- (rout);
-    \draw[flow] (rout) -- (cons);
-    \draw[flow] (cons.east) -- ++(3mm,0) |- (bus.west);
-    \draw[flow] (cons.east) -- ++(3mm,0) |- (out.west);
-    \draw[flow] (cons.south) |- (rfree.east);
-    \draw[flow] (rfree.west) -| (prod.south);
-    \draw[flow] (file) -- (cfg);
-    \draw[flow, dashed] (cfg) -- node[lab, right] {one snapshot\\per frame} (eff);
-    \draw[flow, dashed] (cons) -- node[lab, left] {once a second} (stats);
-  \end{tikzpicture}
+    \begin{tikzpicture}[node distance=5mm and 6mm]
+      \node[ext] (cam) {camera or\\frame bus};
+      \node[proc, right=of cam] (prod) {producer\\capture, decode};
+      \node[buf, right=of prod] (rin) {ring\\\emph{in}};
+      \node[proc, right=of rin, text width=34mm] (eff)
+      {effects\\image statistics\\visibility correction\\operator chain};
+      \node[buf, right=of eff] (rout) {ring\\\emph{out}};
+      \node[proc, right=of rout] (cons) {consumer\\publish};
+      \node[buf, below=9mm of eff] (rfree) {ring \emph{free}\\pool of 8 frames};
+      \node[buf, right=11mm of cons, yshift=7mm] (bus) {frame
+      bus\\\emph{pilot}, \emph{raw}};
+      \node[ext, right=11mm of cons, yshift=-7mm] (out) {webcam
+      device,\\raw recording};
+      \node[proc, above=7mm of eff] (cfg) {config watcher};
+      \node[ext, left=8mm of cfg] (file) {effects.json};
+      \node[proc, above=7mm of cons] (stats) {stats\\health file};
+      \draw[flow] (cam) -- (prod);
+      \draw[flow] (prod) -- (rin);
+      \draw[flow] (rin) -- (eff);
+      \draw[flow] (eff) -- (rout);
+      \draw[flow] (rout) -- (cons);
+      \draw[flow] (cons.east) -- ++(3mm,0) |- (bus.west);
+      \draw[flow] (cons.east) -- ++(3mm,0) |- (out.west);
+      \draw[flow] (cons.south) |- (rfree.east);
+      \draw[flow] (rfree.west) -| (prod.south);
+      \draw[flow] (file) -- (cfg);
+      \draw[flow, dashed] (cfg) -- node[lab, right] {one
+      snapshot\\per frame} (eff);
+      \draw[flow, dashed] (cons) -- node[lab, left] {once a second} (stats);
+    \end{tikzpicture}
   \end{adjustbox}
-  \caption{Threads and buffers of \eeye{}. Frames circulate from the free ring through
-    capture, processing and publication and back; the pool of eight frames bounds the
-    output lag. Configuration changes reach the effects thread as whole snapshots.
-    The stats thread writes the health file, so that file input/output never runs on
-    the consumer.}\label{fig:eeye}
+  \caption{Threads and buffers of \eeye{}. Frames circulate from the
+    free ring through
+    capture, processing and publication and back; the pool of eight
+    frames bounds the
+    output lag. Configuration changes reach the effects thread as
+    whole snapshots.
+    The stats thread writes the health file, so that file
+    input/output never runs on
+  the consumer.}\label{fig:eeye}
 \end{figure*}

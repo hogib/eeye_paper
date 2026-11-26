@@ -17,9 +17,9 @@
 \newif\ifreview
 \reviewtrue
 \ifreview
-  \documentclass[12pt,journal,onecolumn,draftclsnofoot]{IEEEtran}
+\documentclass[12pt,journal,onecolumn,draftclsnofoot]{IEEEtran}
 \else
-  \documentclass[journal]{IEEEtran}
+\documentclass[journal]{IEEEtran}
 \fi
 
 \usepackage{cite}
@@ -35,11 +35,11 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{orcidlink}
 \ifreview
-  \usepackage{lineno}
-  % Number the lines around displayed equations too.
-  \AtBeginEnvironment{equation}{\linenomath}
-  \AtEndEnvironment{equation}{\endlinenomath}
-  \linenumbers
+\usepackage{lineno}
+% Number the lines around displayed equations too.
+\AtBeginEnvironment{equation}{\linenomath}
+\AtEndEnvironment{equation}{\endlinenomath}
+\linenumbers
 \fi
 
 \newcommand{\eeye}{\texttt{eeye}}
@@ -52,11 +52,12 @@
 % Figure styles: processes, buffers and data paths.
 \tikzset{
   proc/.style={draw, rounded corners=2pt, fill=gray!8, align=center,
-    font=\footnotesize, minimum height=7mm, inner sep=3pt},
+  font=\footnotesize, minimum height=7mm, inner sep=3pt},
   buf/.style={draw, fill=white, align=center, font=\footnotesize,
-    minimum height=6mm, inner sep=3pt},
-  ext/.style={draw, dashed, align=center, font=\footnotesize, minimum height=7mm,
-    inner sep=3pt},
+  minimum height=6mm, inner sep=3pt},
+  ext/.style={draw, dashed, align=center, font=\footnotesize, minimum
+    height=7mm,
+  inner sep=3pt},
   box/.style={draw, rounded corners=4pt, inner sep=6pt},
   flow/.style={-{Stealth[length=2mm]}, semithick},
   net/.style={-{Stealth[length=2mm]}, very thick},
@@ -71,52 +72,72 @@ Transport for Remotely Operated Underwater Vehicles}
 % CRediT roles (not printed in the IEEE layout). H. O. Bolat: Conceptualization,
 % Methodology, Software, Validation, Investigation, Writing -- original draft.
 % H. Ersoy: Writing -- review and editing.
-\author{H.~O\u{g}uz~Bolat\,\orcidlink{0009-0000-8522-7746} and Hakan~Ersoy\,\orcidlink{0009-0006-0495-6589}%
-\thanks{H. O. Bolat is with the Department of Geomatics Engineering, Y\i{}ld\i{}z
-Technical University, Davutpa\c{s}a Campus, 34220 Esenler, \.Istanbul, T\"urkiye
-(e-mail: oguz.bolat@std.yildiz.edu.tr). \emph{(Corresponding author: H. O\u{g}uz
-Bolat.)}}%
-\thanks{H. Ersoy is with the Department of Electronics and Communication Engineering,
-Y\i{}ld\i{}z Technical University, Davutpa\c{s}a Campus, 34220 Esenler, \.Istanbul,
+\author{H.~O\u{g}uz~Bolat\,\orcidlink{0009-0000-8522-7746} and
+  Hakan~Ersoy\,\orcidlink{0009-0006-0495-6589}%
+  \thanks{H. O. Bolat is with the Department of Geomatics
+    Engineering, Y\i{}ld\i{}z
+    Technical University, Davutpa\c{s}a Campus, 34220 Esenler,
+    \.Istanbul, T\"urkiye
+    (e-mail: oguz.bolat@std.yildiz.edu.tr). \emph{(Corresponding
+        author: H. O\u{g}uz
+  Bolat.)}}%
+  \thanks{H. Ersoy is with the Department of Electronics and
+    Communication Engineering,
+    Y\i{}ld\i{}z Technical University, Davutpa\c{s}a Campus, 34220
+    Esenler, \.Istanbul,
 T\"urkiye.}}
 
 \ifreview
-  \markboth{}{}
+\markboth{}{}
 \else
-  \markboth{IEEE Journal of Oceanic Engineering}%
-  {Bolat and Ersoy: Real-Time Image Enhancement and Low-Latency Video Transport for
-  Remotely Operated Underwater Vehicles}
+\markboth{IEEE Journal of Oceanic Engineering}%
+{Bolat and Ersoy: Real-Time Image Enhancement and Low-Latency Video
+  Transport for
+Remotely Operated Underwater Vehicles}
 \fi
 
 \maketitle
 
 \begin{abstract}
-The pilot of a remotely operated vehicle steers by a video picture that turbid water
-degrades and that a tether carries with delay, and image processing inserted between
-the camera and the pilot must add little delay. We describe
-electric-eye, two C99 programs for GNU/Linux. \eeye{} applies a chain of image operators (point operations fused into
-look-up tables, blur, Sobel, Laplacian-of-Gaussian and Canny edges) and an optional
-continuous visibility correction (cast removal, contrast stretch and local
-histogram equalization, smoothed over time), and publishes frames on a
-shared-memory frame bus that never waits for its readers. \hellion{} carries the
-picture across the tether as H.264 over RTP, relays the vehicle's packets to
-QGroundControl unchanged, records them, measures the link, serves a browser control
-page, and finds its counterpart on the network. Either program can run on
-either side of the tether, and a vehicle whose camera encodes H.264 can send that
-stream unchanged, with no encoder on board. Two changes on the receiving side, an end-of-frame
-delimiter inserted by the relay and slice-threaded decoder output, reduced the
-transport latency from bus to bus over loopback from 70.4 to 3.8~ms at
-640$\times$480 and from 74.8 to 8.3~ms at 1280$\times$720. The visibility correction
-costs 0.55~ms per 1280$\times$720 frame on four desktop threads. Output-preserving optimizations were checked byte for byte against the previous code on
-x86-64 and, under emulation, on ARMv7 and AArch64. The software has not yet been run
-on a vehicle; code and release binaries are open.
+  The pilot of a remotely operated vehicle steers by a video picture
+  that turbid water
+  degrades and that a tether carries with delay, and image processing
+  inserted between
+  the camera and the pilot must add little delay. We describe
+  electric-eye, two C99 programs for GNU/Linux. \eeye{} applies a chain of image
+  operators (point operations fused into
+  look-up tables, blur, Sobel, Laplacian-of-Gaussian and Canny edges)
+  and an optional
+  continuous visibility correction (cast removal, contrast stretch and local
+  histogram equalization, smoothed over time), and publishes frames on a
+  shared-memory frame bus that never waits for its readers.
+  \hellion{} carries the
+  picture across the tether as H.264 over RTP, relays the vehicle's packets to
+  QGroundControl unchanged, records them, measures the link, serves a
+  browser control
+  page, and finds its counterpart on the network. Either program can run on
+  either side of the tether, and a vehicle whose camera encodes H.264
+  can send that
+  stream unchanged, with no encoder on board. Two changes on the
+  receiving side, an end-of-frame
+  delimiter inserted by the relay and slice-threaded decoder output, reduced the
+  transport latency from bus to bus over loopback from 70.4 to 3.8~ms at
+  640$\times$480 and from 74.8 to 8.3~ms at 1280$\times$720. The
+  visibility correction
+  costs 0.55~ms per 1280$\times$720 frame on four desktop threads.
+  Output-preserving
+  optimizations were checked byte for byte against the previous code on
+  x86-64 and, under emulation, on ARMv7 and AArch64. The software has
+  not yet been run
+  on a vehicle; code and release binaries are open.
 \end{abstract}
 
 % Keep the heading and the terms on one page.
 \needspace{4\baselineskip}
 \begin{IEEEkeywords}
-Embedded Linux, image enhancement, low-latency video, remotely operated vehicle,
-RTP, underwater imaging.
+  Embedded Linux, image enhancement, low-latency video, remotely
+  operated vehicle,
+  RTP, underwater imaging.
 \end{IEEEkeywords}
 
 \input{sections/introduction}

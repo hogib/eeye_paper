@@ -3,34 +3,52 @@
 \subsection{Where the delay was}
 
 The delay removed from the transport was not where delay is usually sought. The
-encoder took 1.2 to 1.5~ms and the loopback network nothing; two frame periods were
-held in the receiving process, one because its parser recognizes the end of a frame
-by the start of the next, and one because its output stage was threaded by frame.
-Neither is a property of H.264 or of RTP, and the packets on the tether are the same
-before and after. Stage-by-stage measurements in the literature find, as here, that
+encoder took 1.2 to 1.5~ms and the loopback network nothing; two
+frame periods were
+held in the receiving process, one because its parser recognizes the
+end of a frame
+by the start of the next, and one because its output stage was
+threaded by frame.
+Neither is a property of H.264 or of RTP, and the packets on the
+tether are the same
+before and after. Stage-by-stage measurements in the literature find,
+as here, that
 encoding, the network and decoding need a few milliseconds
-\cite{bachhuber2018,lv2026,georg2020}, while pipelines assembled from standard parts
+\cite{bachhuber2018,lv2026,georg2020}, while pipelines assembled from
+standard parts
 report 60 to 200~ms without assigning it to a stage
-\cite{green2021,khalil2026,schimpe2022,testouri2025}; the 70~ms from which we started
-was one of these. We did not measure those pipelines and cannot say that the same two
-causes are at work in them. They are, however, properties of a widely used decoder
+\cite{green2021,khalil2026,schimpe2022,testouri2025}; the 70~ms from
+which we started
+was one of these. We did not measure those pipelines and cannot say
+that the same two
+causes are at work in them. They are, however, properties of a widely
+used decoder
 when it is fed over RTP, and not of our sender, so that they are worth excluding
-wherever such a delay is unexplained. For the ROV observed at 850~ms with H.264 and
+wherever such a delay is unexplained. For the ROV observed at 850~ms
+with H.264 and
 500~ms with MJPEG, the authors recommended cameras of low compression
-\cite{kaknjo2018}, which needed more than ten times the bit rate there; our result
+\cite{kaknjo2018}, which needed more than ten times the bit rate
+there; our result
 suggests that the codec need not be given up for the sake of delay.
 
-What remains, 3.8 to 8.3~ms, is the transport's share only. It excludes the camera,
+What remains, 3.8 to 8.3~ms, is the transport's share only. It
+excludes the camera,
 whose delay after exposure alone ranged from 2 to 82~ms in one survey
-\cite{ubik2021}, and the display; the two were more than half of the delay from scene
+\cite{ubik2021}, and the display; the two were more than half of the
+delay from scene
 to display in an optimized chain \cite{bachhuber2018}. With the transport at a
 quarter of a frame period, the camera and the display are now where the pilot's
-delay is, and the capture path of Section~\ref{sec:capture}, which discards all but
+delay is, and the capture path of Section~\ref{sec:capture}, which
+discards all but
 the newest buffer, addresses the part of it that software controls. Whether the
-67~ms removed matters to a pilot is not settled by this work. Delays of that size
-lengthen fine manipulation \cite{mackenzie1993,nankaku2022}, the shortest delay found
-to degrade driving is 170~ms \cite{chen2007}, and for underwater vehicles we found
-only impressions \cite{bauer2025,doniec2010}. The saving is best regarded as room in
+67~ms removed matters to a pilot is not settled by this work. Delays
+of that size
+lengthen fine manipulation \cite{mackenzie1993,nankaku2022}, the
+shortest delay found
+to degrade driving is 170~ms \cite{chen2007}, and for underwater
+vehicles we found
+only impressions \cite{bauer2025,doniec2010}. The saving is best
+regarded as room in
 the pilot's delay budget, which image processing can then spend.
 
 \subsection{The visibility correction}
@@ -38,70 +56,106 @@ the pilot's delay budget, which image processing can then spend.
 The correction belongs to the cheapest class of enhancement and uses its usual
 operators; what it adds is that the parameters of those operators, and not the
 pixels, follow their targets through a first-order filter. On a still scene
-consecutive frames then differ by at most one level in fewer than 0.1\% of pixels,
-and a step in brightness is followed within 1.5~s. That time constant is a choice
+consecutive frames then differ by at most one level in fewer than
+0.1\% of pixels,
+and a step in brightness is followed within 1.5~s. That time constant
+is a choice
 between flicker and lag: a pilot who turns the lights on sees an over- or
-under-corrected picture for a second or so. Filtering parameters costs nothing per
+under-corrected picture for a second or so. Filtering parameters
+costs nothing per
 pixel and cannot produce the ghosting of temporal filters on pixels
-\cite{ancuti2012}, but it steadies only what is global, and the tile mappings of the
+\cite{ancuti2012}, but it steadies only what is global, and the tile
+mappings of the
 local equalization are the least global part of it.
 
-Its limits are those of its class. A global correction cannot undo a loss that grows
-with range \cite{berman2020}; in a scene that spans near and far, the far part stays
-blue and hazy. The red patch of the synthetic scene recovered only in part, because
-no gain restores a channel of which a quarter was transmitted without also raising
-its noise. On a flat, dark frame the standard deviation rose 3.9~times in spite of
+Its limits are those of its class. A global correction cannot undo a
+loss that grows
+with range \cite{berman2020}; in a scene that spans near and far, the
+far part stays
+blue and hazy. The red patch of the synthetic scene recovered only in
+part, because
+no gain restores a channel of which a quarter was transmitted without
+also raising
+its noise. On a flat, dark frame the standard deviation rose
+3.9~times in spite of
 the limit on gain, so that the correction amplifies sensor noise when there is
-nothing else to amplify. And the evaluation is on synthetic frames from a model that
+nothing else to amplify. And the evaluation is on synthetic frames
+from a model that
 is itself a simplification \cite{akkaynak2018}, a practice with known weaknesses
-\cite{berman2020}; the constants of Table~\ref{tab:autovis} were set on such frames
-and a laptop camera and will change on footage from the vehicle. We did not score
-the correction with the no-reference measures in common use, which its stretch and
-saturation gain would raise by construction (Section~\ref{sec:rw-enhancement}). Since
+\cite{berman2020}; the constants of Table~\ref{tab:autovis} were set
+on such frames
+and a laptop camera and will change on footage from the vehicle. We
+did not score
+the correction with the no-reference measures in common use, which
+its stretch and
+saturation gain would raise by construction
+(Section~\ref{sec:rw-enhancement}). Since
 unprocessed pictures serve object detectors best \cite{wang2024detectors}, the
 correction is applied to the pilot's picture alone and the camera's frame is
 published unaltered beside it.
 
 \subsection{The frame bus}
 
-The frame bus is the non-blocking write protocol in its form with several buffers
+The frame bus is the non-blocking write protocol in its form with
+several buffers
 \cite{kopetz1993}, mapped from a file and with a futex for waiting. It has that
-protocol's central property, that the writer is not influenced by its readers, and
+protocol's central property, that the writer is not influenced by its
+readers, and
 therefore the property that matters on a vehicle: a program that reads frames,
 however slow or faulty, cannot delay the pilot's picture. It does not have the
-protocol's bound on the reader's repetitions, which rests on guarantees of timing
+protocol's bound on the reader's repetitions, which rests on
+guarantees of timing
 that Linux does not give; a reader repeats a copy only when preempted for about
-three frame periods, and then receives a newer frame. Against transports that pass a
-pointer \cite{pohnl2023} the bus pays a copy for each frame on each side, 34.9~$\mu$s
+three frame periods, and then receives a newer frame. Against
+transports that pass a
+pointer \cite{pohnl2023} the bus pays a copy for each frame on each
+side, 34.9~$\mu$s
 to publish at 1280$\times$720 on a desktop processor, and in exchange needs no
-daemon, no allocation in shared memory by readers, and no library: a reader is a few
-lines in any language that can map a file. For frames of this size at 30 frames per
-second the copy is a small price; for many streams of much larger frames it would
+daemon, no allocation in shared memory by readers, and no library: a
+reader is a few
+lines in any language that can map a file. For frames of this size at
+30 frames per
+second the copy is a small price; for many streams of much larger
+frames it would
 not be. The cost of the copy on the vehicle's processor has not been measured.
 
 \subsection{Placement and the vehicle's processor}
 
-The one measurement on a single-board computer shows where the vehicle's processor
-goes: of 0.91 of a core for the whole of electric-eye at 1280$\times$720, the H.264
-encoder took 0.51, on a processor throttled by heat. Image processing, capture and
-the bus together are the smaller part. This is the reason for sending a camera's own
+The one measurement on a single-board computer shows where the
+vehicle's processor
+goes: of 0.91 of a core for the whole of electric-eye at
+1280$\times$720, the H.264
+encoder took 0.51, on a processor throttled by heat. Image
+processing, capture and
+the bus together are the smaller part. This is the reason for sending
+a camera's own
 H.264, which removes the encoder from the vehicle, and it has a price: without
 decoded frames on the vehicle the operators run at the surface, and the pilot's
-picture is encoded a second time there for the ground station. That mode has been
+picture is encoded a second time there for the ground station. That
+mode has been
 tested with files and a loopback device and not yet with a camera that encodes.
 
 \subsection{Limitations}
 
-The software has not been run on a vehicle. The latency was measured over loopback on
-one laptop, without the tether's modems, the vehicle's camera or its processor; the
+The software has not been run on a vehicle. The latency was measured
+over loopback on
+one laptop, without the tether's modems, the vehicle's camera or its
+processor; the
 processing costs on ARM are counts of instructions under emulation, which do not
-represent memory behaviour, and one throttled run on a Raspberry Pi~5; the camera was
+represent memory behaviour, and one throttled run on a Raspberry
+Pi~5; the camera was
 a laptop's. The equivalence checks were run under emulation for both ARM
-targets, and an emulator tests its own rendering of the instructions; only the test
+targets, and an emulator tests its own rendering of the instructions;
+only the test
 suites have run on an AArch64 processor. The visibility
-correction has been evaluated on synthetic frames, and no pilot has flown with it.
-The next steps are accordingly the vehicle itself: the costs and the latency on its
-processor and across its tether, the delay of its camera and of the display by an
-optical method \cite{bachhuber2016}, the correction's constants on footage from the
-water, and a comparison of pilots' performance with and without the correction and
+correction has been evaluated on synthetic frames, and no pilot has
+flown with it.
+The next steps are accordingly the vehicle itself: the costs and the
+latency on its
+processor and across its tether, the delay of its camera and of the
+display by an
+optical method \cite{bachhuber2016}, the correction's constants on
+footage from the
+water, and a comparison of pilots' performance with and without the
+correction and
 the shortened transport.

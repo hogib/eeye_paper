@@ -1,30 +1,43 @@
 \subsection{Frame bus}\label{sec:bus}
 
-Programs on one machine exchange video through the frame bus: one shared-memory file
+Programs on one machine exchange video through the frame bus: one
+shared-memory file
 per stream (in \texttt{/dev/shm}), with a 4096-byte header and four slots
-(Table~\ref{tab:bus}). The writer never waits for a reader. It writes frame $n$ into
+(Table~\ref{tab:bus}). The writer never waits for a reader. It writes
+frame $n$ into
 slot $(n-1) \bmod 4$, protected by a sequence lock \cite{boehm2012}: the slot's
 counter is odd while it is written and $2n$ when frame $n$ is complete. A reader
 takes the newest frame number, copies the slot, and keeps the copy only if the
-counter read $2n$ before and after; otherwise the writer overtook it and it starts
+counter read $2n$ before and after; otherwise the writer overtook it
+and it starts
 over. A slow reader therefore skips frames and cannot delay the pilot's picture.
-Readers sleep on a futex \cite{franke2002} that the writer wakes after each frame. A
-restarted writer builds a new file and renames it into place; readers notice the new
-file and map it again. A heartbeat updated every 500~ms tells a stopped writer from a
+Readers sleep on a futex \cite{franke2002} that the writer wakes
+after each frame. A
+restarted writer builds a new file and renames it into place; readers
+notice the new
+file and map it again. A heartbeat updated every 500~ms tells a
+stopped writer from a
 live one with no new frames, after 3~s.
 
-A frame marked as having neutral chroma (Section~\ref{sec:operators}) is published by
-copying luma only; each slot's chroma planes are filled with 128 the first time the slot
-receives such a frame and left in place afterwards, so that readers receive the same
-bytes as from a full copy. The writer keeps the layout it created in its own memory
+A frame marked as having neutral chroma (Section~\ref{sec:operators})
+is published by
+copying luma only; each slot's chroma planes are filled with 128 the
+first time the slot
+receives such a frame and left in place afterwards, so that readers
+receive the same
+bytes as from a full copy. The writer keeps the layout it created in
+its own memory
 rather than reading it back from the shared header, so that a header damaged by
-another process with access to the file cannot direct the writer's copies outside the
-mapping. The layout is documented so that a reader can be written in any language;
+another process with access to the file cannot direct the writer's
+copies outside the
+mapping. The layout is documented so that a reader can be written in
+any language;
 Python needs only \texttt{mmap} and \texttt{struct}.
 
 \begin{table*}[!t]
   \centering\small
-  \caption{Frame bus layout. Offsets in bytes; all fields little-endian.}\label{tab:bus}
+  \caption{Frame bus layout. Offsets in bytes; all fields
+  little-endian.}\label{tab:bus}
   \begin{tabular}{@{}rlL{8.4cm}@{}}
     \toprule
     Offset & Field & Content \\
@@ -34,13 +47,15 @@ Python needs only \texttt{mmap} and \texttt{struct}.
     16 & generation & differs for every writer run \\
     24, 28 & width, height & image size in pixels \\
     32, 36 & format, range & I422 planar (\texttt{422P}); full range \\
-    40--75 & plane offsets, strides, sizes & Y, U, V within a slot's image data \\
+    40--75 & plane offsets, strides, sizes & Y, U, V within a slot's
+    image data \\
     76, 80 & slot count, slot header size & 4; 64 bytes \\
     128 & futex word & changes on every frame and on close \\
     136 & write sequence & number of frames published \\
     152 & heartbeat & monotonic time, renewed every 500~ms \\
     \addlinespace
-    \multicolumn{3}{@{}l}{\emph{Slot header (64 bytes), followed by the Y, U and V planes}} \\
+    \multicolumn{3}{@{}l}{\emph{Slot header (64 bytes), followed by
+    the Y, U and V planes}} \\
     0 & sequence & $2n$ when frame $n$ is complete; odd while written \\
     8 & frame number & counts one per captured frame \\
     16, 24 & capture time & monotonic and wall-clock nanoseconds \\

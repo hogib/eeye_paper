@@ -1,52 +1,82 @@
 \subsection{Verification and measurement}\label{sec:verification}
 
-The source carries 19 test suites, run on every build: the configuration parser, the
-ring buffers, the JPEG decoding and framing, resolution negotiation, the operators and
-the chain, the visibility correction, the camera controls, the raw recorder and the
-webcam output, child processes, the frame bus under concurrent processes (including a
-writer overtaking a reader during a copy), the health records, the HTTP server and
-client, \hellion{}'s pipelines, relay, status file and RTP round trip through FFmpeg, the
-H.264 packetizer packet by packet, and the resource measurement described below. A
-camera's own H.264 was tested from a file source through the packetizer, the topside's
-relay and decoder, and the recorder, by comparing every decoded frame and every frame
+The source carries 19 test suites, run on every build: the
+configuration parser, the
+ring buffers, the JPEG decoding and framing, resolution negotiation,
+the operators and
+the chain, the visibility correction, the camera controls, the raw
+recorder and the
+webcam output, child processes, the frame bus under concurrent
+processes (including a
+writer overtaking a reader during a copy), the health records, the
+HTTP server and
+client, \hellion{}'s pipelines, relay, status file and RTP round trip
+through FFmpeg, the
+H.264 packetizer packet by packet, and the resource measurement
+described below. A
+camera's own H.264 was tested from a file source through the
+packetizer, the topside's
+relay and decoder, and the recorder, by comparing every decoded frame
+and every frame
 of the recording with FFmpeg's decode of the file. It was also run through
 V4L2 from a loopback device carrying H.264 at 1280$\times$720 and 30~frames per
-second, but not yet on a camera that encodes. On every change the suites run with GCC
-and Clang, with and without OpenMP, on x86-64, and natively on AArch64, which executes
+second, but not yet on a camera that encodes. On every change the
+suites run with GCC
+and Clang, with and without OpenMP, on x86-64, and natively on
+AArch64, which executes
 the NEON paths, and the HTTP parsers are fuzzed with libFuzzer for a minute. The
 suites also run, as built for release, on ARMv7 and AArch64 under QEMU user-mode
-emulation, and the suites of the changed components were run under AddressSanitizer
+emulation, and the suites of the changed components were run under
+AddressSanitizer
 and UndefinedBehaviorSanitizer.
 
-Each change that should not alter the output was checked against the previous code by
-hashing the output of both over a fixed set of inputs: three 1280$\times$720 camera
-photographs and synthetic frames of edge-case sizes (odd chroma widths, frames one or
+Each change that should not alter the output was checked against the
+previous code by
+hashing the output of both over a fixed set of inputs: three
+1280$\times$720 camera
+photographs and synthetic frames of edge-case sizes (odd chroma
+  widths, frames one or
 two pixels wide), every strength and threshold of the operator in steps, 1 to 7
 threads, on x86-64 and on both ARM targets under emulation.
-Processing costs were measured as the minimum over repeated runs on an AMD Ryzen~5
+Processing costs were measured as the minimum over repeated runs on
+an AMD Ryzen~5
 5600 (6 cores) with the threads of OpenMP set to sleep while idle, as \eeye{}
-configures them; costs on ARM were estimated as executed instruction counts under QEMU
+configures them; costs on ARM were estimated as executed instruction
+counts under QEMU
 with an instruction-counting plugin, which reflects the work but not the memory
 behaviour of a Raspberry Pi.
 
 The cost of a running installation is measured from outside by a command of
-\hellion{} that follows every \eeye{} and \hellion{} process on the machine and the
+\hellion{} that follows every \eeye{} and \hellion{} process on the
+machine and the
 child processes they started. Once a second it samples, from \texttt{/proc} and
 \texttt{/sys} only, the processor time of each process and of each named thread,
-resident memory, context switches, the processor's temperature, clock and throttling
-state, the frame rates on the frame bus, the frame rate, drops, bit rate and loss of
+resident memory, context switches, the processor's temperature, clock
+and throttling
+state, the frame rates on the frame bus, the frame rate, drops, bit
+rate and loss of
 each pipeline, and the traffic of each network interface; it does not touch the
 processes it measures. It was run on a Raspberry Pi~5 carrying a 1280$\times$720
 stream in placement~B.
 
-Transport latency was measured from frame bus to frame bus through two \hellion{}
-processes, one as the vehicle and one as the topside, connected over loopback on an
-idle laptop (AMD Ryzen~5 5600H, FFmpeg~9.0.2). A test program published frames whose
-pixels encode their frame number and read them from the receiving bus; the latency of a
-frame is the difference between the two times, and an RTP tap between the encoder and
+Transport latency was measured from frame bus to frame bus through
+two \hellion{}
+processes, one as the vehicle and one as the topside, connected over
+loopback on an
+idle laptop (AMD Ryzen~5 5600H, FFmpeg~9.0.2). A test program
+published frames whose
+pixels encode their frame number and read them from the receiving
+bus; the latency of a
+frame is the difference between the two times, and an RTP tap between
+the encoder and
 the decoder divided it into stages. The complete chain was
-also run between two machines on a local network, the laptop's built-in camera (HP
-Wide Vision HD, UVC) serving as the vehicle's camera, for placements A and B, for the
-camera controls in placement~A, for the recording and the decoder across disconnections
-of the network cable, and for automatic pairing. Neither program has yet been run on the
-vehicle, with its camera or across its tether. Section~\ref{sec:results} gives the results.
+also run between two machines on a local network, the laptop's
+built-in camera (HP
+Wide Vision HD, UVC) serving as the vehicle's camera, for placements
+A and B, for the
+camera controls in placement~A, for the recording and the decoder
+across disconnections
+of the network cable, and for automatic pairing. Neither program has
+yet been run on the
+vehicle, with its camera or across its tether.
+Section~\ref{sec:results} gives the results.
