@@ -1,0 +1,114 @@
+\subsection{Continuous visibility correction}\label{sec:autovis}
+
+Water absorbs red light first, scatters light into the line of sight, and attenuates
+contrast with distance \cite{jaffe1990,schettini2010}: underwater pictures are
+blue-green, compressed in brightness and hazy, and they change as the vehicle
+descends. Because the pilot cannot tune effects while flying, \eeye{} provides a
+correction, off by default and switched on from a single control on the page, that
+adapts continuously and has no parameters to set. It runs before the operator chain,
+on the pilot's picture only; \emph{raw} is never altered, so that autonomy code and the
+pilot's own comparison see the camera's frame.
+
+The correction is steered by statistics of the raw frame, taken on every second pixel
+of every second row: the luma histogram, and the mean chroma offsets $\bar u$,
+$\bar v$ from neutral over samples with $24 \leq Y \leq 235$, which excludes pixels
+too dark to carry colour and pixels that have lost it to clipping. From these it
+derives three corrections, each a target that the applied correction follows with the
+first-order filter
+\begin{equation}\label{eq:smooth}
+  c_k = c_{k-1} + \alpha_k\,(c^{*}_k - c_{k-1}), \qquad
+  \alpha_k = 1 - e^{-\Delta t_k/\tau},
+\end{equation}
+where $\Delta t_k$ is the difference between the capture times of consecutive frames,
+so that the response does not depend on the frame rate. A gap of more than 1~s, or
+switching the correction on, sets $c_k = c^{*}_k$, without fading in from no correction.
+
+\emph{Colour cast.} Following the grey-world assumption \cite{buchsbaum1980}, the
+target chroma shift removes the measured cast down to a deadband $d$,
+\begin{equation}\label{eq:cast}
+  (\Delta u^{*}, \Delta v^{*}) = -\frac{\max(m - d, 0)}{m}\,(\bar u, \bar v),
+  \qquad m = \sqrt{\bar u^2 + \bar v^2},
+\end{equation}
+with each component limited to $\pm 48$. The deadband leaves the small cast that a
+scene's own colours produce; without it the synthetic scene of Figure~\ref{fig:autovis}
+(red, yellow and orange objects, cast 9.9) had its grey background shifted by 11.7
+chroma units towards blue. Since a cast is a gain on the light, the shift applied at a
+chroma sample is scaled by $\min(Y/\bar Y, 1.5)$, where $Y$ is the luma under the
+sample and $\bar Y$ the mean luma of the measured samples, and chroma is then scaled
+about 128 by a saturation gain of 1.2.
+
+\emph{Brightness range.} The 0.5th and 99.5th luma percentiles, $p_\mathrm{lo}$ and
+$p_\mathrm{hi}$, are stretched to 0 and 255; percentiles rather than extrema, so that
+a few bright particles of backscatter cannot defeat the stretch. When
+$p_\mathrm{hi} - p_\mathrm{lo}$ is under 96 levels the interval is widened to 96 about
+its centre, which limits the gain to 2.7 and keeps the sensor noise of a flat, dark
+frame from being amplified into texture. A gamma $\gamma = \ln 0.45 / \ln \tilde m$,
+limited to 0.55--1.6, where $\tilde m$ is the median luma after the stretch, places
+the median at 45\% of full scale.
+
+\emph{Haze.} Contrast-limited adaptive histogram equalization (CLAHE)
+\cite{pizer1987,zuiderveld1994}, applied to luma as in earlier underwater
+enhancement \cite{hitam2013}, restores local contrast. The frame is divided into
+tiles of about 160$\times$120 pixels (at most 8$\times$6); each tile's histogram is
+clipped at twice the height of a flat histogram, the excess is spread evenly over all
+levels, and the cumulative histogram gives the tile's mapping, mixed with the identity
+at a weight of 0.7. The tile mappings are smoothed over time by Eq.~\eqref{eq:smooth},
+composed with the global stretch, and interpolated bilinearly between the four nearest
+tile centres for each pixel. The tile histograms are taken from the source luma and
+pushed through the global mapping, so that the globally corrected image need not be
+written and read again. Table~\ref{tab:autovis} lists the constants.
+
+The correction was evaluated on synthetic frames formed by the classical underwater
+image model \cite{jaffe1990}, a simplification of the revised model of
+Akkaynak and Treibitz \cite{akkaynak2018},
+\begin{equation}\label{eq:water}
+  I_c = J_c\,t_c + B_c\,(1 - t_c), \qquad c \in \{R, G, B\},
+\end{equation}
+with transmissions $t = (0.25, 0.70, 0.80)$ and veiling light $B = (15, 110, 125)$,
+applied to a scene of coloured patches, gratings of three spatial frequencies, a
+gradient and noise of $\pm 2$ levels (Figure~\ref{fig:autovis}). After 30 frames the
+cast magnitude $m$ fell from 39.1 to 9.1, the 1st--99th percentile luma range rose
+from 129 to 249 levels, and the mean absolute difference between neighbouring luma
+samples, a measure of visible edge contrast, rose from 7.86 to 19.17. The red patch,
+grey-green in the degraded frame ($V - 128 = 0.0$), read red again ($23.1$). On a
+uniform frame of luma $30 \pm 3$, the standard deviation rose from 2.00 to 7.80
+(3.9$\times$). After a step change in brightness the first frame differed from the
+settled result by 105.9 levels in mean luma and the result settled within 1.5~s; a
+still scene produced consecutive frames that differ by at most one level in fewer than
+0.1\% of pixels.
+
+\begin{table}[!t]
+  \centering\small
+  \caption{Constants of the visibility correction. They were set on the synthetic
+    frames of Eq.~\eqref{eq:water} and a laptop camera, and are to be revised on
+    footage from the vehicle.}\label{tab:autovis}
+  \begin{tabular}{@{}L{5.4cm}r@{}}
+    \toprule
+    Constant & Value \\
+    \midrule
+    Smoothing time constant $\tau$, Eq.~\eqref{eq:smooth} & 0.4~s \\
+    Gap that restarts the smoothing & 1~s \\
+    Luma range of samples used for the cast & 24--235 \\
+    Cast deadband $d$, Eq.~\eqref{eq:cast} & 8 \\
+    Largest chroma shift & $\pm 48$ \\
+    Saturation gain & 1.2 \\
+    Stretch percentiles & 0.5th, 99.5th \\
+    Smallest stretched interval (largest gain) & 96 levels (2.7) \\
+    Target median & 0.45 \\
+    Gamma limits & 0.55--1.6 \\
+    CLAHE tile size (largest grid) & $\approx$160$\times$120~px (8$\times$6) \\
+    CLAHE clip limit & 2.0 \\
+    Weight of the local mapping & 0.7 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\ifreview 0.8\fi\columnwidth]{figures/fig3_autovis.png}
+  \caption{The visibility correction on synthetic frames. Top: the scene degraded by
+    Eq.~\eqref{eq:water} (left) and corrected (right). Bottom: the undegraded scene
+    (left) and corrected (right), where the correction should change little. The red,
+    yellow and orange patches lose most of their red to the model's transmission of
+    0.25 and recover only partly.}\label{fig:autovis}
+\end{figure}

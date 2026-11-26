@@ -1,0 +1,84 @@
+\subsection{System overview}\label{sec:overview}
+
+The pipeline processes the video of a remotely operated vehicle (ROV) between its
+camera and the pilot. It was built for a BlueROV2 \cite{bluerov2}, whose onboard
+Raspberry Pi runs BlueOS and the ArduSub autopilot \cite{ardusub} and is joined to a
+topside computer by an Ethernet tether, and it runs on any GNU/Linux machine. It
+consists of two programs (Figure~\ref{fig:overview}). \eeye{}, the vision layer, takes
+frames from a camera or from the tether, applies a configurable chain of image
+operators and an optional continuous visibility correction, and publishes the result
+(\emph{pilot}) and the untouched camera frame (\emph{raw}) on a shared-memory
+\emph{frame bus} for any other program on the machine; it has no network code.
+\hellion{} does everything that crosses the tether: it encodes the video as H.264
+\cite{itu_h264} over RTP \cite{rfc3550,rfc6184}, receives it topside, relays it to
+QGroundControl \cite{qgroundcontrol}, records it, serves a browser control page, and
+carries \eeye{}'s settings from the page to wherever \eeye{} runs. The two programs
+communicate only through the frame bus and \eeye{}'s configuration file, so either can
+be restarted without the other.
+
+\eeye{} runs on one side of the tether, chosen at installation (the \emph{placement};
+Figure~\ref{fig:overview}). In placement~B it runs on the vehicle next to the camera,
+the vehicle sends the processed picture, and the topside relays the received packets to
+QGroundControl unchanged, so the picture is encoded once. In placement~A the vehicle
+sends its camera, \eeye{} runs topside on the decoded stream, and the processed picture
+is encoded a second time for QGroundControl; this moves the image processing off the
+vehicle's processor. Autonomy code is expected to run next to \eeye{} and read
+\emph{raw} from the bus, so that its input is the camera's frame and carries the
+camera's timestamps.
+
+\begin{figure*}[!t]
+  \centering
+  \begin{tikzpicture}[node distance=4mm and 5mm]
+    % Placement B
+    \node[lab, anchor=west] (bt) at (0,0) {\textbf{Placement B}};
+    \node[ext, below=3mm of bt.south west, anchor=north west] (cam) {camera};
+    \node[proc, right=of cam] (ee) {\eeye{}\\effects};
+    \node[buf, right=of ee] (bus) {frame bus\\\emph{pilot}, \emph{raw}};
+    \node[proc, right=of bus] (hr) {\hellion{}\\encode};
+    \node[proc, below=14mm of hr] (ht) {\hellion{}\\relay, decode};
+    \node[ext, right=10mm of ht, yshift=5mm] (qgc) {QGroundControl\\UDP 5600};
+    \node[ext, right=10mm of ht, yshift=-6mm] (rec) {MP4 recording};
+    \node[buf, left=of ht] (tbus) {frame bus\\\emph{pilot}};
+    \node[ext, left=of tbus] (page) {browser page,\\webcam device};
+    \draw[flow] (cam) -- (ee);
+    \draw[flow] (ee) -- (bus);
+    \draw[flow] (bus) -- (hr);
+    \draw[net] (hr) -- node[lab, left, pos=0.45] {H.264/RTP\\over the tether} (ht);
+    \draw[flow] (ht.east) -- ++(4mm,0) |- (qgc.west);
+    \draw[flow] (ht.east) -- ++(4mm,0) |- (rec.west);
+    \draw[flow] (ht) -- (tbus);
+    \draw[flow] (tbus) -- (page);
+    \begin{scope}[on background layer]
+      \node[box, fill=blue!3, fit=(cam)(ee)(bus)(hr), label={[lab]above right:ROV}] {};
+      \node[box, fill=green!3, fit=(page)(tbus)(ht)(qgc)(rec),
+            label={[lab]below right:topside}] {};
+    \end{scope}
+    % Placement A
+    \node[lab, anchor=west] (at) at (0,-5.4) {\textbf{Placement A}};
+    \node[ext, below=3mm of at.south west, anchor=north west] (camA) {camera};
+    \node[proc, right=of camA] (hrA) {\hellion{}\\encode};
+    \node[proc, below=14mm of hrA] (htA) {\hellion{}\\decode};
+    \node[buf, right=of htA] (busA) {frame bus\\\emph{camera}};
+    \node[proc, right=of busA] (eeA) {\eeye{}\\effects};
+    \node[buf, right=of eeA] (busA2) {frame bus\\\emph{pilot}};
+    \node[proc, below=6mm of busA2] (heA) {\hellion{}\\encode};
+    \node[ext, left=of heA] (qgcA) {QGroundControl, page,\\webcam device};
+    \draw[flow] (camA) -- (hrA);
+    \draw[net] (hrA) -- node[lab, left, pos=0.45] {H.264/RTP\\over the tether} (htA);
+    \draw[flow] (htA) -- (busA);
+    \draw[flow] (busA) -- (eeA);
+    \draw[flow] (eeA) -- (busA2);
+    \draw[flow] (busA2) -- (heA);
+    \draw[flow] (heA) -- (qgcA);
+    \begin{scope}[on background layer]
+      \node[box, fill=blue!3, fit=(camA)(hrA), label={[lab]above right:ROV}] {};
+      \node[box, fill=green!3, fit=(htA)(busA)(eeA)(busA2)(heA)(qgcA),
+            label={[lab]below right:topside}] {};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{The two programs and the two placements. In placement B, used on the
+    vehicle, \eeye{} processes the camera on the ROV, and QGroundControl receives the
+    ROV's packets unchanged. In placement A the ROV sends its camera and the
+    processing runs topside, at the cost of a second encode. Programs on one machine
+    exchange frames only through the frame bus.}\label{fig:overview}
+\end{figure*}

@@ -1,0 +1,143 @@
+\subsection{Video transport across the tether}\label{sec:transport}
+
+\hellion{} runs \emph{pipelines}, each with one source (a camera, a frame bus stream,
+RTP from the tether, or a camera's own H.264 stream) and up to eight sinks (a frame bus stream, a v4l2loopback
+webcam device \cite{v4l2loopback}, or RTP); each sink has its own thread behind a
+one-frame mailbox in which the newest frame replaces an unsent one, so that a slow
+sink loses its own frames without delaying the others (Figure~\ref{fig:transport}).
+Every sink but the last receives a copy of the frame; the last receives the frame's
+own buffer in exchange for its mailbox buffer, so that a pipeline with one sink, as
+on the vehicle, copies no frames.
+
+H.264 encoding and decoding run in FFmpeg child processes \cite{ffmpeg}
+(Table~\ref{tab:transport}). The encoder receives raw frames on a pipe and sends RTP
+to a local port. Before the pipe, \hellion{} converts the bus's full-range 4:2:2 frame
+to the limited-range 4:2:0 frame that H.264 receivers expect,
+\begin{equation}\label{eq:range}
+  Y' = 16 + \tfrac{219}{255}\,Y, \qquad C' = 128 + \tfrac{224}{255}\,(C - 128),
+\end{equation}
+in 16-bit fixed point after averaging chroma rows in pairs, and the decoder applies
+the inverse; uniform frames of luma 40 and 200 sent across the tether return as 40 and
+200. Converting in \hellion{} rather than in an FFmpeg filter reduced the encoder's
+CPU time by 29\% at 1280$\times$720 and 30~frames per second and the bytes on the pipe
+by 25\%. Frames are time-stamped at the configured nominal rate; stamping them with
+their arrival time made FFmpeg drop one frame in six at its default time base and,
+at a 1~ms time base, made the x264 rate control spend 161~kbit/s of a 4\,000~kbit/s
+budget.
+
+Encoding is the largest cost on the vehicle (Section~\ref{sec:verification}), and many
+USB cameras encode H.264 themselves. A pipeline whose source is such a camera reads the
+encoded stream through V4L2 and sends it as it is, so that the vehicle neither decodes
+nor encodes and needs no FFmpeg. \hellion{} packetizes each access unit itself
+\cite{rfc6184}, in the form the FFmpeg encoder sends (Table~\ref{tab:transport}), so
+that the topside is the same for both; the parameter sets of a camera that sends them
+only once are kept and repeated before every keyframe. Three things differ from the
+capture of Section~\ref{sec:capture}. Every picture is taken, in order, because a
+skipped picture would corrupt all those predicted from it until the next keyframe. RTP
+timestamps are the driver's capture times rather than a nominal rate. And when a
+topside is found the camera is asked for a keyframe, by the V4L2 control for it or
+else by restarting its stream, since a receiver shows nothing until one arrives; the
+keyframe interval otherwise is the camera's. Such a pipeline carries no decoded
+frames: its only sinks are RTP, written by the source thread with no mailbox, and the
+operators run topside (placement~A).
+
+All RTP traffic passes through a relay in \hellion{}. On the vehicle the encoder's
+local port is relayed to the topside; topside, the relay owns the tether port and
+copies every packet to the local decoder, to the recorder and to QGroundControl. The
+relay sees every RTP header, so that each link's bit rate and loss are measured from
+the sequence numbers (modulo $2^{16}$); a late packet is not counted as lost, a new
+synchronization source starts a new count, and more than 1~s of silence also restarts
+the count, since a sender that kept running through an outage returns more than
+$2^{15}$ numbers ahead. The relay also removes a frame of delay from the decoder:
+FFmpeg's H.264 parser knows a frame has ended only when the next one begins, so
+after each packet that carries the RTP marker bit, which ends a frame
+\cite{rfc6184}, the relay sends the decoder an access unit delimiter and renumbers the
+decoder's packets to keep the sequence continuous. QGroundControl and the recorder
+receive the stream unchanged. The decoder's raw output, a plain copy, runs with slice
+threading, because the frame-threaded raw video encoder of FFmpeg~5.1 and later
+releases each frame only when the next one arrives.
+
+The recorder copies the received H.264 into fragmented MP4 without decoding, so that a
+file cut off by a power loss plays to its last keyframe. When the stream stops, the
+recording pauses and continues in a new file once packets return. The browser page
+shows a preview of any frame bus stream, encoded as MJPEG at about 15~frames per
+second by one encoder per stream that all viewers share, and its control interface
+carries \eeye{}'s settings and camera controls to the side where \eeye{} or the
+camera runs. Once a second the two \hellion{} processes exchange a short status
+description, so that the dashboard on either machine shows what the other end sends
+and receives. Each \hellion{} also announces itself once a second on UDP port 5612,
+over IPv4 broadcast and IPv6 link-local multicast; a \hellion{} configured with
+automatic addresses pairs with the one of the opposite role that announces the same
+pair name, and refuses to choose when two answer.
+
+\begin{figure*}[!t]
+  \centering
+  \begin{tikzpicture}[node distance=4mm and 5mm]
+    \node[buf] (bus) {frame bus\\\emph{pilot}};
+    \node[proc, right=of bus] (sink) {RTP sink\\thread};
+    \node[proc, right=of sink] (conv) {4:2:2 full $\to$\\4:2:0 limited};
+    \node[proc, right=7mm of conv] (enc) {FFmpeg\\x264 encoder};
+    \node[proc, right=7mm of enc] (rel) {relay};
+    \node[proc, below=16mm of rel] (trel) {relay\\loss, bit rate};
+    \node[ext, right=10mm of trel, yshift=5mm] (qgc) {QGroundControl};
+    \node[ext, right=10mm of trel, yshift=-6mm] (rec) {recorder\\MP4};
+    \node[proc, left=7mm of trel] (aud) {end-of-frame\\delimiter};
+    \node[proc, left=of aud] (dec) {FFmpeg\\decoder};
+    \node[buf, left=of dec] (tbus) {frame bus\\\emph{pilot}};
+    \node[proc, below=6mm of tbus] (hub) {preview hub\\one encoder};
+    \node[ext, below=6mm of hub] (web) {browsers};
+    \node[ext, below=6mm of dec] (v4l) {webcam\\device};
+    \draw[flow] (bus) -- (sink);
+    \draw[flow] (sink) -- (conv);
+    \draw[flow] (conv) -- node[lab, above] {pipe} (enc);
+    \draw[flow] (enc) -- node[lab, above] {UDP} (rel);
+    \draw[net] (rel) -- node[lab, right] {tether, UDP 5610} (trel);
+    \draw[flow] (trel.east) -- ++(4mm,0) |- (qgc.west);
+    \draw[flow] (trel.east) -- ++(4mm,0) |- (rec.west);
+    \draw[flow] (trel) -- (aud);
+    \draw[flow] (aud) -- (dec);
+    \draw[flow] (dec) -- (tbus);
+    \draw[flow] (dec) -- (v4l);
+    \draw[flow] (tbus) -- (hub);
+    \draw[flow] (hub) -- node[lab, right] {MJPEG} (web);
+    \begin{scope}[on background layer]
+      \node[box, fill=blue!3, fit=(bus)(sink)(conv)(enc)(rel), label={[lab]above right:ROV, \hellion{}}] {};
+      \node[box, fill=green!3, fit=(tbus)(dec)(aud)(trel)(qgc)(rec)(hub)(web)(v4l),
+            label={[lab]below right:topside, \hellion{}}] {};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{Video transport in placement B. The vehicle's \hellion{} converts each frame
+    to the encoder's format and relays the encoder's packets; topside, a relay owns the
+    tether port, measures the link, and copies every packet to QGroundControl and the
+    recorder unchanged and to the decoder followed by an end-of-frame delimiter. One
+    preview encoder per stream serves all browsers.}\label{fig:transport}
+\end{figure*}
+
+\begin{table*}[!t]
+  \centering\small
+  \caption{Transport settings.}\label{tab:transport}
+  \begin{tabular}{@{}L{3.3cm}L{10.2cm}@{}}
+    \toprule
+    Stage & Setting \\
+    \midrule
+    Encoder input & raw I420, limited range (Eq.~\ref{eq:range}), nominal frame rate \\
+    Encoder & libx264 \cite{x264}, preset \texttt{ultrafast}, tune \texttt{zerolatency}
+      (no B-frames, no look-ahead); 4\,000~kbit/s, maximum rate 4\,000~kbit/s,
+      buffer 2\,000~kbit; keyframe every 30 frames; parameter sets before every keyframe \\
+    Packetization & RTP, payload type 96, packets of at most 1\,200 bytes, marker bit
+      on a picture's last packet; for a camera's own H.264, single NAL unit packets and
+      FU-A fragments (packetization mode~1) \\
+    Tether & UDP port 5610 (QGroundControl's 5600 is left free) \\
+    Decoder input & no input buffering, low-delay flags, no reordering wait;
+      an access unit delimiter after each frame \\
+    Decoder output & raw I422, full range, fixed size; slice threading \\
+    Recording & stream copy into fragmented MP4, a fragment per keyframe \\
+    Preview & MJPEG, 4:2:0, quality 75, $\approx$15 frames per second, one encoder per stream \\
+    Restarts & encoder with back-off from 1 to 30~s; decoder at once, or after 5~s
+      without output while packets arrive \\
+    \bottomrule
+  \end{tabular}
+  \tablenote{The encoder can be replaced per pipeline, for example by a hardware encoder
+    on the vehicle, or left out when the camera encodes; the decoder side does not
+    depend on the encoder. The encoder rows do not apply to a camera's own H.264.}
+\end{table*}

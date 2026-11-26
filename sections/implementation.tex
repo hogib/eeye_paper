@@ -1,0 +1,16 @@
+\subsection{Implementation and deployment}\label{sec:implementation}
+
+Both programs are written in C99 and built by one GNU make file; they need a C99
+compiler (GCC~4.7 or later, or Clang), libjpeg-turbo~1.4 or later and, for \hellion{},
+FFmpeg at run time (not on a vehicle that sends its camera's own H.264), and they run
+on Linux~3.2 or later. Release binaries are built
+statically for x86-64, ARMv7 with NEON and AArch64 with GCC~15.3 (Bootlin toolchains
+2026.08-1 \cite{bootlin}) and libjpeg-turbo~3.2.0, so that they need no libraries
+on the target. Child processes are started with their program resolved before
+\texttt{fork}, with inherited file descriptors closed and signals reset, in their own
+process group, and are stopped by closing their input before signalling them. An
+installation script installs both programs as system services on each end of the
+tether, given the end's role and the placement and, for a camera that encodes, its device,
+in which case FFmpeg is neither installed nor required on the vehicle; the two services run as one service
+user, so that \hellion{} can write \eeye{}'s configuration and both can use the frame
+bus, and neither needs elevated privileges.

@@ -1,4 +1,4 @@
-# paper.tex -> paper.pdf
+# main.tex -> main.pdf
 #
 #   make            the manuscript
 #   make clean      remove the intermediate files
@@ -19,7 +19,7 @@ endif
 
 all: main.pdf
 
-main.pdf: main.tex refs.bib cas-sc.cls cas-common.sty cas-model2-names.bst $(wildcard figures/*)
+main.pdf: main.tex refs.bib $(wildcard sections/*.tex) $(wildcard figures/*)
 	$(TEX) main.tex
 
 clean:
