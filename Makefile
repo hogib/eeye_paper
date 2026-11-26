@@ -17,10 +17,10 @@ endif
 .PHONY: all clean
 .DELETE_ON_ERROR:
 
-all: paper.pdf
+all: main.pdf
 
-paper.pdf: paper.tex refs.bib cas-sc.cls cas-common.sty cas-model2-names.bst $(wildcard figures/*)
-	$(TEX) paper.tex
+main.pdf: main.tex refs.bib cas-sc.cls cas-common.sty cas-model2-names.bst $(wildcard figures/*)
+	$(TEX) main.tex
 
 clean:
 	rm -f *.aux *.bbl *.blg *.log *.out *.fls *.fdb_latexmk *.xdv *.fff *.lof *.ttt
