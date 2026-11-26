@@ -105,16 +105,23 @@ a lag below 50~ms \cite{ware1994}. In telesurgery a delay of 70~ms, about 50~ms 
 from the video codec, lengthened all four manipulation tasks significantly against no
 delay, and up to 100~ms was judged acceptable \cite{nankaku2022}. For vehicles the
 effects appear later: performance in simulated path following first degraded between
-200 and 300~ms \cite{chen2025delay}, and a review places a minor effect below 170~ms
-and degradation above 300~ms \cite{kamtam2024}. For ROVs the evidence is one
-experienced operator's impression of a vehicle of the class considered here, which
+200 and 300~ms \cite{chen2025delay}, and a review places degradation above 300~ms
+\cite{kamtam2024}; an earlier review gives 170~ms as the shortest delay found to
+degrade simulated driving, and stresses that the threshold depends on the task
+\cite{chen2007}. In a driving simulator with 28 untrained drivers, 300~ms of added
+delay lowered speed and raised steering effort and workload in a slalom, 600~ms
+degraded lane keeping, and neither changed parking \cite{neumeier2019}. For underwater vehicles we found only impressions. One
+experienced operator of a vehicle of the class considered here found that it
 remained controllable up to about 100~ms of added delay and lost precision work at
-500~ms \cite{bauer2025}, and an estimate of 1~s of video latency, against 200~ms of
+500~ms \cite{bauer2025}; users steering an underwater robot over an optical link, on
+which the age of the last valid command averaged 51~ms and no video was sent, could
+not tell
+it from a tether \cite{doniec2010}; and there is an estimate of 1~s of video latency, against 200~ms of
 control latency, in the operation of marine vehicles from a remote control room over
 a mobile network \cite{vasilijevic2023}.
 The delay removed in Section~\ref{sec:transport} is thus of a size that matters for
-fine, visually guided work elsewhere; that it matters for piloting an ROV has not
-been shown. Without a tether, commands over an acoustic link took 2 to 3~s
+fine, visually guided work elsewhere; we found no controlled study of its effect on
+piloting an ROV. Without a tether, commands over an acoustic link took 2 to 3~s
 \cite{ferraresso2026} and video reached 1 to 2 frames per second \cite{mishra2024},
 so that the tether remains the channel for piloted work \cite{quattrini2023}.
 
@@ -127,13 +134,22 @@ that the codec need not cost this: at 640$\times$480, with x264 coding every fra
 independently, encoding took 0.88~ms, the network 0.02~ms and decoding 0.27~ms of
 19.67~ms from scene to display, more than half of which belonged to the camera and
 the display \cite{bachhuber2018}; at 2560$\times$720, x264 encoded in 3.78~ms, faster
-than an embedded hardware encoder at its default clock \cite{lv2026}. Pipelines left
+than an embedded hardware encoder at its default clock \cite{lv2026}. A teleoperated
+car tuned stage by stage reached 78~ms from scene to display on a local network at
+1920$\times$800 and 55 frames per second, of which all processing took less than
+15~ms, and exchanging the monitor alone moved the total between 48 and 116~ms
+\cite{georg2020}. Nine cameras delayed their output by 2 to 82~ms after the end of
+exposure, most of them by one to three frames \cite{ubik2021}. Pipelines left
 at their defaults nevertheless report 61 to 68~ms between encoder input and decoder
 output at 480 lines \cite{green2021}, about 62~ms \cite{khalil2026}, and from
 scene to display 104~ms \cite{schimpe2022}, 163~ms with the hardware encoder of a
 Raspberry Pi \cite{jennehag2016} and 202~ms \cite{testouri2025}, each without
-attribution to a stage. The 70~ms from which Table~\ref{tab:latency} starts is of
-that order.
+attribution to a stage. Where such a delay was attributed, it was to a buffer: a
+pipeline of x264 and RTP delivered 1920$\times$1080 video from a drone over a mobile
+network within 200~ms of encoding, about 150~ms of it in the receiver's jitter
+buffer \cite{baltaci2022}, which the decoder input of Table~\ref{tab:transport} does
+without. The 70~ms from which Table~\ref{tab:latency} starts is of the order of the
+unattributed figures.
 
 \emph{Encoder and decoder.} The delays of the encoder are documented. The
 zero-latency tuning of x264 reduced the delay through one 4K chain from 41 to 82
@@ -157,15 +173,19 @@ delays the output by a frame for every thread beyond the first \cite{ffmpegmt}. 
 the work we read, that delay is not measured, and the wait of a parser for the start
 of the next frame, which Section~\ref{sec:transport} removes with a delimiter, is not
 reported; the nearest account leaves the interval between the sender and the
-decoder's input unresolved \cite{lv2026}.
+decoder's input unresolved \cite{lv2026}, and another suspects the receiver's
+pipeline of a delay near 1~s without locating it \cite{baltaci2022}.
 
 \emph{Measurement.} The delay from scene to display is measured with a light in the
-camera's view and a photosensor on the display, to 0.5~ms \cite{bachhuber2016}, or by
+camera's view and a photosensor on the display, to 0.5~ms
+\cite{bachhuber2016,georg2020}, or by
 filming a displayed timestamp beside its transmitted copy \cite{wei2013}. A timestamp
 written into the pixels before encoding and read after decoding
-\cite{green2021,khalil2026}, the method of Section~\ref{sec:verification}, needs no
-second camera and resolves single frames, but leaves out the camera's exposure and
-the display, which the optical methods include; the figures of
+\cite{green2021,khalil2026,baltaci2022}, the method of
+Section~\ref{sec:verification}, needs no second camera and resolves single frames,
+but leaves out the display and the camera, whose delay after exposure alone was 2 to
+82~ms in the cameras of \cite{ubik2021}; the optical methods include both. The
+figures of
 Table~\ref{tab:latency} are therefore the transport's share of what the pilot sees.
 
 \subsection{Vehicle software and the transport of frames}\label{sec:rw-software}

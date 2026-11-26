@@ -8,8 +8,8 @@ writer overtaking a reader during a copy), the health records, the HTTP server a
 client, \hellion{}'s pipelines, relay, status file and RTP round trip through FFmpeg, the
 H.264 packetizer packet by packet, and the resource measurement described below. A
 camera's own H.264 was tested from a file source through the packetizer, the topside's
-relay and decoder, and the recorder: every decoded frame and every frame of the
-recording was byte-identical to FFmpeg's decode of the file. It was also run through
+relay and decoder, and the recorder, by comparing every decoded frame and every frame
+of the recording with FFmpeg's decode of the file. It was also run through
 V4L2 from a loopback device carrying H.264 at 1280$\times$720 and 30~frames per
 second, but not yet on a camera that encodes. On every change the suites run with GCC
 and Clang, with and without OpenMP, on x86-64, and natively on AArch64, which executes
@@ -22,12 +22,12 @@ Each change that should not alter the output was checked against the previous co
 hashing the output of both over a fixed set of inputs: three 1280$\times$720 camera
 photographs and synthetic frames of edge-case sizes (odd chroma widths, frames one or
 two pixels wide), every strength and threshold of the operator in steps, 1 to 7
-threads, on x86-64 and on both ARM targets under emulation (Table~\ref{tab:equivalence}).
+threads, on x86-64 and on both ARM targets under emulation.
 Processing costs were measured as the minimum over repeated runs on an AMD Ryzen~5
 5600 (6 cores) with the threads of OpenMP set to sleep while idle, as \eeye{}
 configures them; costs on ARM were estimated as executed instruction counts under QEMU
 with an instruction-counting plugin, which reflects the work but not the memory
-behaviour of a Raspberry Pi (Table~\ref{tab:costs}).
+behaviour of a Raspberry Pi.
 
 The cost of a running installation is measured from outside by a command of
 \hellion{} that follows every \eeye{} and \hellion{} process on the machine and the
@@ -36,90 +36,17 @@ child processes they started. Once a second it samples, from \texttt{/proc} and
 resident memory, context switches, the processor's temperature, clock and throttling
 state, the frame rates on the frame bus, the frame rate, drops, bit rate and loss of
 each pipeline, and the traffic of each network interface; it does not touch the
-processes it measures. On a Raspberry Pi~5, which has no hardware H.264 encoder, a
-1280$\times$720 stream in placement~B took 0.91 of a core in all, of which the FFmpeg
-encoder took 0.51; the Pi was throttled by heat during that run, so both figures are
-upper estimates. This is the cost that sending a camera's own H.264
-(Section~\ref{sec:transport}) removes from the vehicle; the saving itself is still to
-be measured.
+processes it measures. It was run on a Raspberry Pi~5 carrying a 1280$\times$720
+stream in placement~B.
 
 Transport latency was measured from frame bus to frame bus through two \hellion{}
 processes, one as the vehicle and one as the topside, connected over loopback on an
 idle laptop (AMD Ryzen~5 5600H, FFmpeg~9.0.2). A test program published frames whose
 pixels encode their frame number and read them from the receiving bus; the latency of a
 frame is the difference between the two times, and an RTP tap between the encoder and
-the decoder divided it into stages (Table~\ref{tab:latency}). The complete chain was
+the decoder divided it into stages. The complete chain was
 also run between two machines on a local network, the laptop's built-in camera (HP
 Wide Vision HD, UVC) serving as the vehicle's camera, for placements A and B, for the
 camera controls in placement~A, for the recording and the decoder across disconnections
 of the network cable, and for automatic pairing. Neither program has yet been run on the
-vehicle, with its camera or across its tether.
-
-\begin{table*}[!t]
-  \centering\small
-  \caption{Transport latency, frame bus to frame bus through two \hellion{} processes
-    over loopback; median (10th--90th percentile) of 300 frames.}\label{tab:latency}
-  \begin{adjustbox}{max width=\linewidth}
-  \begin{tabular}{@{}lccc@{}}
-    \toprule
-    & \makecell{640$\times$480\\30 frames/s} & \makecell{640$\times$480\\60 frames/s}
-    & \makecell{1280$\times$720\\30 frames/s} \\
-    \midrule
-    Without the delimiter and slice threading & 70.4 (70.2--70.6)~ms & 37.0 (36.8--37.2)~ms & 74.8 (74.6--75.1)~ms \\
-    With both & 3.8 (3.7--4.1)~ms & 3.7 (3.6--3.9)~ms & 8.3 (8.1--8.6)~ms \\
-    \bottomrule
-  \end{tabular}
-  \end{adjustbox}
-  \tablenote{Without the two measures the decoder held two frame periods: about one in
-    FFmpeg's H.264 parser and one in its raw video output. The encoder, from the frame
-    written to its last RTP packet, took 1.2--1.5~ms at 640$\times$480, and \hellion{}'s
-    own relay, pipe and bus about 0.5~ms. Camera exposure, the tether and the vehicle's
-    encoder add to these figures.}
-\end{table*}
-
-\begin{table*}[!t]
-  \centering\small
-  \caption{Processing costs per 1280$\times$720 frame. x86-64: AMD Ryzen~5 5600,
-    minimum over repeated runs, 4 threads unless stated. ARM: executed instructions under
-    emulation, one thread, 20 frames.}\label{tab:costs}
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{@{}L{6.2cm}L{3.2cm}L{4.2cm}@{}}
-    \toprule
-    Stage & x86-64 & ARM (instructions) \\
-    \midrule
-    Image statistics and visibility correction & 0.55~ms (2.09~ms, 1 thread) & -- \\
-    Blur, strength 1 & 0.18~ms & AArch64 183\,M; ARMv7 263\,M \\
-    Blur, strength 4 & 0.59--0.66~ms & AArch64 283\,M; ARMv7 391\,M \\
-    Blur, strength 8 & 0.84~ms & AArch64 486\,M; ARMv7 676\,M \\
-    Blur, strength 20 & 1.56~ms & -- \\
-    Canny, strength 2, thresholds 40/90 & 3.41--3.82~ms & -- \\
-    Frame bus publication & 34.9~$\mu$s; 17.2~$\mu$s with neutral chroma & -- \\
-    \addlinespace
-    \hellion{} preview, 1 and 4 viewers & 4\% and 4\% of a core & -- \\
-    Encoder (FFmpeg, libx264), 30 frames/s & 0.21~s of CPU per second of video, laptop & -- \\
-    \bottomrule
-  \end{tabular}
-  \tablenote{Before the measures described in the text, the visibility correction took
-    1.49~ms, the blur 0.75, 1.38 and 2.27~ms at strengths 1, 4 and 8 (and 900\,M and
-    1\,108\,M instructions on AArch64 at 4 and 8), Canny 3.80--4.20~ms, the preview
-    13\% of a core with four viewers, and the encoder 0.30~s of CPU per second of
-    video.}
-\end{table*}
-
-\begin{table*}[!t]
-  \centering\small
-  \caption{Equivalence checks: output hashed over all cases for the previous and the
-    revised code; every comparison was identical.}\label{tab:equivalence}
-  \setlength{\tabcolsep}{4pt}
-  \begin{tabular}{@{}L{3.6cm}L{6.2cm}rL{3.2cm}@{}}
-    \toprule
-    Change & Inputs & Cases & Platforms (threads) \\
-    \midrule
-    Visibility correction & smooth, flat and noisy synthetic sequences of 60 frames, at
-      sizes from 1920$\times$1080 to 1$\times$1, including padded strides & -- & x86-64, AArch64, ARMv7 \\
-    Canny & 3 photographs $\times$ 4 strengths $\times$ 7 low $\times$ 6 high thresholds & 504 & x86-64 (1, 3, 4), AArch64, ARMv7 (4) \\
-    Blur, half-resolution NEON & 4 sizes $\times$ strengths 0--20 $\times$ 3 or 1 planes & 168 & x86-64 (1, 4), AArch64, ARMv7 (4) \\
-    Blur, scratch-plane passes & 7 sizes, including 2-pixel-wide frames $\times$ strengths 0--20 $\times$ 3 or 1 planes & 294 & x86-64 (1, 3, 4), AArch64, ARMv7 (4) \\
-    \bottomrule
-  \end{tabular}
-\end{table*}
+vehicle, with its camera or across its tether. Section~\ref{sec:results} gives the results.

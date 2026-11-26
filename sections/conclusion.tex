@@ -1,0 +1,13 @@
+\section{Conclusion}\label{sec:conclusion}
+
+electric-eye places image processing between the camera and the pilot of an ROV and
+carries the picture across the tether. Its visibility correction steadies a cheap,
+model-free enhancement by filtering its parameters over time, at half a millisecond
+per frame on a desktop processor. Its frame bus gives other programs the camera's
+frame and the pilot's picture from shared memory without letting them delay either.
+Its transport sends standard H.264 over RTP, and two changes in how the receiver is
+fed and threaded reduced the latency from bus to bus from 70 to 4~ms at
+640$\times$480; the delay had been in the receiver, not in the codec or the network.
+Optimized paths were held to byte-identical output on three architectures. These
+results are from the bench, and the work that remains is on the vehicle and with its
+pilots. The source code and release binaries are open.

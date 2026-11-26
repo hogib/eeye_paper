@@ -1,6 +1,6 @@
 # electric-eye: Real-Time Image Enhancement and Low-Latency Video Transport for Remotely Operated Underwater Vehicles
 
-LaTeX sources of the material-and-methods description of electric-eye, the camera
+LaTeX sources of the manuscript on electric-eye, the camera
 processing (`eeye`) and tether transport (`hellion`) pipeline for remotely operated
 underwater vehicles. The software is at https://github.com/hogib/electric-eye; this
 description corresponds to commit b7a2e8a, which follows release v0.3.2.
@@ -27,7 +27,7 @@ top for the two-column final format.
 | file | content |
 |---|---|
 | `main.tex` | preamble, title, abstract; inputs the sections |
-| `sections/` | one file per subsection, plus code availability and acknowledgment |
+| `sections/` | introduction, related work, one file per subsection of the design and methods, results, discussion, conclusion, code availability and acknowledgment |
 | `refs.bib` | references |
 | `figures/` | Figure 3, rendered from the frames of the software's own test (`tests/test_auto_vis.c`); the other figures are drawn in TikZ in the section files |
 

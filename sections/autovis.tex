@@ -66,16 +66,8 @@ Akkaynak and Treibitz \cite{akkaynak2018},
 \end{equation}
 with transmissions $t = (0.25, 0.70, 0.80)$ and veiling light $B = (15, 110, 125)$,
 applied to a scene of coloured patches, gratings of three spatial frequencies, a
-gradient and noise of $\pm 2$ levels (Figure~\ref{fig:autovis}). After 30 frames the
-cast magnitude $m$ fell from 39.1 to 9.1, the 1st--99th percentile luma range rose
-from 129 to 249 levels, and the mean absolute difference between neighbouring luma
-samples, a measure of visible edge contrast, rose from 7.86 to 19.17. The red patch,
-grey-green in the degraded frame ($V - 128 = 0.0$), read red again ($23.1$). On a
-uniform frame of luma $30 \pm 3$, the standard deviation rose from 2.00 to 7.80
-(3.9$\times$). After a step change in brightness the first frame differed from the
-settled result by 105.9 levels in mean luma and the result settled within 1.5~s; a
-still scene produced consecutive frames that differ by at most one level in fewer than
-0.1\% of pixels.
+gradient and noise of $\pm 2$ levels (Figure~\ref{fig:autovis}).
+Section~\ref{sec:res-autovis} gives the results.
 
 \begin{table}[!t]
   \centering\small
@@ -102,13 +94,3 @@ still scene produced consecutive frames that differ by at most one level in fewe
     \bottomrule
   \end{tabular}
 \end{table}
-
-\begin{figure}[!t]
-  \centering
-  \includegraphics[width=\ifreview 0.8\fi\columnwidth]{figures/fig3_autovis.png}
-  \caption{The visibility correction on synthetic frames. Top: the scene degraded by
-    Eq.~\eqref{eq:water} (left) and corrected (right). Bottom: the undegraded scene
-    (left) and corrected (right), where the correction should change little. The red,
-    yellow and orange patches lose most of their red to the model's transmission of
-    0.25 and recover only partly.}\label{fig:autovis}
-\end{figure}

@@ -1,0 +1,143 @@
+\section{Results}\label{sec:results}
+
+All results are from the bench: desktop and laptop computers, a laptop camera,
+synthetic frames, loopback and a local network, and for the ARM builds emulation, a
+continuous-integration runner and one Raspberry Pi~5. None is from the vehicle.
+
+\subsection{Visibility correction}\label{sec:res-autovis}
+
+On the synthetic scene degraded by Eq.~\eqref{eq:water} (Figure~\ref{fig:autovis}),
+after 30 frames the
+cast magnitude $m$ fell from 39.1 to 9.1, the 1st--99th percentile luma range rose
+from 129 to 249 levels, and the mean absolute difference between neighbouring luma
+samples, a measure of visible edge contrast, rose from 7.86 to 19.17. The red patch,
+grey-green in the degraded frame ($V - 128 = 0.0$), read red again ($23.1$). On a
+uniform frame of luma $30 \pm 3$, the standard deviation rose from 2.00 to 7.80
+(3.9$\times$). After a step change in brightness the first frame differed from the
+settled result by 105.9 levels in mean luma and the result settled within 1.5~s; a
+still scene produced consecutive frames that differ by at most one level in fewer than
+0.1\% of pixels. The correction took 0.55~ms per 1280$\times$720 frame on four
+threads and 2.09~ms on one (Table~\ref{tab:costs}).
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\ifreview 0.8\fi\columnwidth]{figures/fig3_autovis.png}
+  \caption{The visibility correction on synthetic frames. Top: the scene degraded by
+    Eq.~\eqref{eq:water} (left) and corrected (right). Bottom: the undegraded scene
+    (left) and corrected (right), where the correction should change little. The red,
+    yellow and orange patches lose most of their red to the model's transmission of
+    0.25 and recover only partly.}\label{fig:autovis}
+\end{figure}
+
+\subsection{Transport latency}\label{sec:res-latency}
+
+Table~\ref{tab:latency} gives the latency from the frame bus of the sending
+\hellion{} to that of the receiving one. Before the two changes on the receiving side
+(Section~\ref{sec:transport}) it was 70.4~ms at 640$\times$480 and 30~frames per
+second and 37.0~ms at 60: it halved when the frame rate doubled, that is, the chain
+held two frame periods. The RTP tap placed both in the decoder's FFmpeg process, one
+in the H.264 parser and one in the raw video output; the encoder, from the frame
+written to its last RTP packet, took 1.2 to 1.5~ms at 640$\times$480, and
+\hellion{}'s own relay, pipe and bus about 0.5~ms. With the delimiter and slice
+threading the latency was 3.8~ms at 30 and 3.7~ms at 60~frames per second, no longer
+a function of the frame period, and 8.3~ms at 1280$\times$720; the 10th and 90th
+percentiles lay within 0.5~ms of the median in every case. A frame whose last packet
+is lost still waits for the next frame, since the relay recognizes the end of a frame
+by that packet's marker bit.
+
+\begin{table*}[!t]
+  \centering\small
+  \caption{Transport latency, frame bus to frame bus through two \hellion{} processes
+    over loopback; median (10th--90th percentile) of 300 frames.}\label{tab:latency}
+  \begin{adjustbox}{max width=\linewidth}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    & \makecell{640$\times$480\\30 frames/s} & \makecell{640$\times$480\\60 frames/s}
+    & \makecell{1280$\times$720\\30 frames/s} \\
+    \midrule
+    Without the delimiter and slice threading & 70.4 (70.2--70.6)~ms & 37.0 (36.8--37.2)~ms & 74.8 (74.6--75.1)~ms \\
+    With both & 3.8 (3.7--4.1)~ms & 3.7 (3.6--3.9)~ms & 8.3 (8.1--8.6)~ms \\
+    \bottomrule
+  \end{tabular}
+  \end{adjustbox}
+  \tablenote{Without the two measures the decoder held two frame periods: about one in
+    FFmpeg's H.264 parser and one in its raw video output. The encoder, from the frame
+    written to its last RTP packet, took 1.2--1.5~ms at 640$\times$480, and \hellion{}'s
+    own relay, pipe and bus about 0.5~ms. Camera exposure, the tether and the vehicle's
+    encoder add to these figures.}
+\end{table*}
+
+
+\subsection{Processing costs}\label{sec:res-costs}
+
+Table~\ref{tab:costs} gives the cost of each stage per 1280$\times$720 frame. On the
+desktop processor every stage is a small part of the 33~ms frame period: the
+visibility correction 0.55~ms, the blur 0.18 to 1.56~ms over its range of strengths,
+the Canny detector 3.4 to 3.8~ms, and publication on the frame bus 34.9~$\mu$s, or
+17.2~$\mu$s for a frame of neutral chroma. The measures described in
+Section~\ref{sec:operators} reduced the instructions executed by the blur on AArch64
+from 900\,M to 283\,M per frame at strength~4 and from 1\,108\,M to 486\,M at
+strength~8.
+
+On a Raspberry Pi~5, which has no hardware H.264 encoder, a 1280$\times$720 stream in
+placement~B took 0.91 of a core in all, of which the FFmpeg encoder took 0.51; the Pi
+was throttled by heat during that run, so both figures are upper estimates. This is
+the cost that sending a camera's own H.264 (Section~\ref{sec:transport}) removes from
+the vehicle; the saving itself is still to be measured.
+
+\begin{table*}[!t]
+  \centering\small
+  \caption{Processing costs per 1280$\times$720 frame. x86-64: AMD Ryzen~5 5600,
+    minimum over repeated runs, 4 threads unless stated. ARM: executed instructions under
+    emulation, one thread, 20 frames.}\label{tab:costs}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}L{6.2cm}L{3.2cm}L{4.2cm}@{}}
+    \toprule
+    Stage & x86-64 & ARM (instructions) \\
+    \midrule
+    Image statistics and visibility correction & 0.55~ms (2.09~ms, 1 thread) & -- \\
+    Blur, strength 1 & 0.18~ms & AArch64 183\,M; ARMv7 263\,M \\
+    Blur, strength 4 & 0.59--0.66~ms & AArch64 283\,M; ARMv7 391\,M \\
+    Blur, strength 8 & 0.84~ms & AArch64 486\,M; ARMv7 676\,M \\
+    Blur, strength 20 & 1.56~ms & -- \\
+    Canny, strength 2, thresholds 40/90 & 3.41--3.82~ms & -- \\
+    Frame bus publication & 34.9~$\mu$s; 17.2~$\mu$s with neutral chroma & -- \\
+    \addlinespace
+    \hellion{} preview, 1 and 4 viewers & 4\% and 4\% of a core & -- \\
+    Encoder (FFmpeg, libx264), 30 frames/s & 0.21~s of CPU per second of video, laptop & -- \\
+    \bottomrule
+  \end{tabular}
+  \tablenote{Before the measures described in the text, the visibility correction took
+    1.49~ms, the blur 0.75, 1.38 and 2.27~ms at strengths 1, 4 and 8 (and 900\,M and
+    1\,108\,M instructions on AArch64 at 4 and 8), Canny 3.80--4.20~ms, the preview
+    13\% of a core with four viewers, and the encoder 0.30~s of CPU per second of
+    video.}
+\end{table*}
+
+
+\subsection{Equivalence and tests}\label{sec:res-equivalence}
+
+Every comparison of Table~\ref{tab:equivalence} was identical: over all cases, thread
+counts and the three architectures, the revised code of each change produced the same
+bytes as the code it replaced. For a camera's own H.264 sent through the packetizer,
+the relay, the decoder and the recorder, every decoded frame and every frame of the
+recording was byte-identical to FFmpeg's decode of the source file. The runs between
+two machines were functional and gave no measurements.
+
+\begin{table*}[!t]
+  \centering\small
+  \caption{Equivalence checks: output hashed over all cases for the previous and the
+    revised code; every comparison was identical.}\label{tab:equivalence}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}L{3.6cm}L{6.2cm}rL{3.2cm}@{}}
+    \toprule
+    Change & Inputs & Cases & Platforms (threads) \\
+    \midrule
+    Visibility correction & smooth, flat and noisy synthetic sequences of 60 frames, at
+      sizes from 1920$\times$1080 to 1$\times$1, including padded strides & -- & x86-64, AArch64, ARMv7 \\
+    Canny & 3 photographs $\times$ 4 strengths $\times$ 7 low $\times$ 6 high thresholds & 504 & x86-64 (1, 3, 4), AArch64, ARMv7 (4) \\
+    Blur, half-resolution NEON & 4 sizes $\times$ strengths 0--20 $\times$ 3 or 1 planes & 168 & x86-64 (1, 4), AArch64, ARMv7 (4) \\
+    Blur, scratch-plane passes & 7 sizes, including 2-pixel-wide frames $\times$ strengths 0--20 $\times$ 3 or 1 planes & 294 & x86-64 (1, 3, 4), AArch64, ARMv7 (4) \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
