@@ -2,465 +2,113 @@
 
 \subsection{Underwater image enhancement}\label{sec:rw-enhancement}
 
-Reviews divide the field into restoration, which inverts a model of
-image formation,
-enhancement, which uses no model, and learned methods
-\cite{schettini2010,wang2019review,lai2025,huang2026review}.
-
-\emph{Model-based restoration} inverts the classical model
-\cite{jaffe1990} or its
-revision \cite{akkaynak2018}. The dark channel prior was adapted to
-water by using
-only the green and blue channels \cite{drews2013}; Sea-thru recovers
-colour with the
-revised model from an image and its range map \cite{akkaynak2019};
-the haze-lines
-method restores an image for each of several water types and keeps
-the result that
-best satisfies the grey-world assumption \cite{berman2020}. None of
-the three reports
-a running time, and the benchmarks that time prior-based methods
-report seconds per
-frame \cite{li2020uieb,peng2023,li2020uwcnn}. A network trained to
-imitate Sea-thru ran at 3 to 4
-frames per second on an embedded graphics processor
-\cite{antoniou2024}. These methods
-correct a loss that grows with range, which a global operation cannot
-\cite{berman2020}; the authors of both \cite{akkaynak2019} and
-\cite{berman2020} add
-that a global contrast stretch serves when the range varies little
-across the scene.
-
-\emph{Model-free enhancement} is the least costly class in the
-comparisons that name
-their methods and their hardware.
-Contrast-limited adaptive histogram equalization took 12.6~ms on a
-300$\times$400
-image against 0.43 to 4.58~s for eight prior-based and learned methods
-\cite{liu2020ruie}, and 50~ms on a 4K frame, where observers ranked its
-output third of twenty methods \cite{xie2024}. A review of real-time enhancement
-defines real time as a response within milliseconds, but times only
-categories of
-method, at 0.64 to 0.81~s each in an interpreted environment on
-unstated hardware,
-and names no embedded platform \cite{moghimi2021}. An early fusion
-method blends a
-frame white-balanced by a grey-world estimate with a version of it equalized
-adaptively, at about 2~s per 800$\times$600 frame in an interpreted environment
-\cite{ancuti2012}. The later fusion method of \cite{ancuti2018}
-compensates the red channel, applies grey-world white balance, and blends a
-gamma-corrected and a sharpened version of the result. Nearest to the
-correction of
-Section~\ref{sec:autovis} is \cite{bianco2015}, which shifts the
-chromatic components
-by a grey-world estimate taken from their median and stretches the
-luminance between
-percentiles; it was timed at 0.8~s per 591$\times$892 image in an interpreted
-environment and evaluated by eye on two images. The known failings of
-the class are
-an overcompensated red where the scene has little red or few hues
-\cite{ancuti2012,ancuti2018,bianco2015,lai2025}, amplified noise, and
-distorted colour
-\cite{wang2019review,liu2020ruie}; the deadband and the limits of
-Section~\ref{sec:autovis} are aimed at the first two.
-
-\emph{Learned methods} account for most recent work \cite{cong2026}.
-Their real-time
-claims are, as a rule, frame rates on a graphics processor at low resolution: 25
-frames per second on an embedded graphics processor and 7.9 on a
-laptop processor at
-256$\times$256 \cite{islam2020}; 16.5 at 1280$\times$720 on a desktop graphics
-processor \cite{luo2026}; 29.5 at 1920$\times$1080 on an embedded
-graphics processor
-and 2.6 on a laptop processor \cite{zhu2026pic}; 12 on a laptop
-processor, with a
-demonstration on the 640$\times$480 camera of an ROV \cite{yang2024lu2net}. A
-ten-layer network took 0.225~s per 640$\times$480 image on a desktop graphics
-processor and 2.25~s without it \cite{li2020uwcnn}. Several
-contain the model-free operators: one fuses white-balanced,
-histogram-equalized and
-gamma-corrected versions of its input \cite{li2020uieb}, and two others append a
-global stretch to their networks \cite{li2020uwcnn,luo2026}.
-
-\emph{Video.} Enhancement applied frame by frame can flicker
-\cite{srinath2025,huang2026review}: four prior-based methods changed
-colour between
-the frames of one video where a network of fixed weights did not, as
-judged by eye
-\cite{li2020uwcnn}. The earliest remedy we read filters pixels: a
-temporal bilateral
-filter on the white-balanced frames, which compares small
-neighbourhoods to avoid
-ghosting, with coherence judged by eye and no smoothing of the white-balance
-estimate described \cite{ancuti2012}. Later remedies are networks that take
-several frames \cite{du2024,xie2024}, optical-flow consistency losses
-in training
-\cite{srinath2025}, and an optimization over each finished video
-\cite{zhu2025waterwave}; none of them reports real-time operation on embedded
-hardware, and \cite{du2024} states that its encoder precludes it.
-Temporal filtering
-is acknowledged as the efficient way to extend an image method to
-video when the form
-of the filter is known \cite{lai2018}, and the inconsistency of
-enhanced underwater
-video was found to lie mainly in content of low spatial and high
-temporal frequency
-\cite{zhu2025waterwave}, which is the content that the global parameters of a
-correction carry. We found temporal filters on pixels \cite{ancuti2012} but no
-evaluation of a first-order filter on the parameters of a global
-correction, which is
-what Eq.~\eqref{eq:smooth} applies; two reviews list
-temporal coherence at low cost as an open need
-\cite{wang2019review,huang2026review}.
-
-\emph{Evaluation and use.} Two no-reference measures, UIQM
-\cite{panetta2016} and
-UCIQE \cite{yang2015}, are weighted sums of colourfulness or the
-spread of chroma,
-contrast, and sharpness or saturation, with weights fitted to opinion
-scores on 30
-and 44 images; their authors report correlations with observers of
-0.56 to 0.75 on
-14 and 44 scenes. By construction they rise with contrast and
-saturation, and UCIQE
-has no term for a cast; later studies find that such measures reward an
-overcorrected red and disagree with observers
-\cite{li2020uieb,liu2020ruie,li2022limits,wang2019review}. Plain histogram
-equalization obtains the best scores in two independent studies while
-giving a red
-picture and the poorest object detection
-\cite{wang2019review,wang2024detectors}.
-The stretch and the saturation gain of Section~\ref{sec:autovis}
-would raise these
-measures whatever their merit, and we therefore evaluate on synthetic
-scenes whose
-undegraded form is known
-(Section~\ref{sec:autovis}), a practice that is criticized in its turn for not
-representing real water \cite{berman2020}. For object detectors, the unprocessed
-picture gave the best accuracy for every detector tested, and the restrained
-operators cost the least \cite{wang2024detectors}; this is one reason
-for \eeye{} to
-publish the camera's frame beside the pilot's. For human viewers the evidence is
-thin: enhancement revealed objects that annotators had missed
-\cite{saleem2025}, and
-a review of ROV pilot interfaces describes the pilot's loss of
-visibility in turbid
-water but gives enhancement of the live picture one clause
-\cite{abdullah2026}. We
-found no study of its effect on piloting.
+Reviews divide the field into restoration, which inverts a model of image
+formation, enhancement, which uses no model, and learned methods
+\cite{schettini2010,wang2019review,lai2025,huang2026review}. Restoration
+\cite{jaffe1990,akkaynak2018} corrects a loss that grows with range, which a
+global operation cannot \cite{berman2020}, but the benchmarks that time
+prior-based methods report seconds per frame
+\cite{li2020uieb,peng2023,li2020uwcnn}. Model-free enhancement is the least
+costly class: contrast-limited adaptive histogram equalization took 12.6~ms on a
+300$\times$400 image against 0.43 to 4.58~s for eight prior-based and learned
+methods \cite{liu2020ruie}. Nearest to the correction of
+Section~\ref{sec:autovis} is \cite{bianco2015}, which shifts the chromatic
+components by a grey-world estimate and stretches the luminance between
+percentiles. The known failings of the class are an overcompensated red where
+the scene has little red or few hues, amplified noise, and distorted colour
+\cite{ancuti2012,ancuti2018,bianco2015,lai2025,wang2019review,liu2020ruie}; the
+deadband and the limits of Section~\ref{sec:autovis} are aimed at the first two.
+Learned methods account for most recent work \cite{cong2026}, and their
+real-time claims are, as a rule, frame rates on a graphics processor at low
+resolution \cite{islam2020,luo2026,zhu2026pic,yang2024lu2net}. Enhancement
+applied frame by frame can flicker \cite{srinath2025,huang2026review}; the
+remedies are a temporal filter on pixels \cite{ancuti2012}, networks that take
+several frames \cite{du2024,xie2024}, optical-flow consistency losses in
+training \cite{srinath2025} and an optimization over each finished video
+\cite{zhu2025waterwave}, and none of them reports real-time operation on
+embedded hardware. We found no evaluation of a first-order filter on the
+parameters of a global correction, which is what Eq.~\eqref{eq:smooth} applies;
+two reviews list temporal coherence at low cost as an open need
+\cite{wang2019review,huang2026review}. The no-reference measures UIQM
+\cite{panetta2016} and UCIQE \cite{yang2015} rise by construction with contrast
+and saturation, and later studies find that they reward an overcorrected red and
+disagree with observers \cite{li2020uieb,liu2020ruie,li2022limits,wang2019review};
+we therefore evaluate on synthetic scenes whose undegraded form is known, a
+practice that is criticized in its turn for not representing real water
+\cite{berman2020}. For object detectors, the unprocessed picture gave the best
+accuracy for every detector tested \cite{wang2024detectors}, which is one reason
+for \eeye{} to publish the camera's frame beside the pilot's; we found no study
+of the effect of enhancement on piloting.
 
 \subsection{Video delay and its transport}\label{sec:rw-latency}
 
-\emph{Tolerable delay.} In a pointing task a lag of 75~ms lengthened
-movement times
-measurably and 225~ms substantially, the cost growing with the difficulty of the
-movement \cite{mackenzie1993}, and a study of reaching in three
-dimensions recommends
-a lag below 50~ms \cite{ware1994}. In telesurgery a delay of 70~ms,
-about 50~ms of it
-from the video codec, lengthened all four manipulation tasks
-significantly against no
-delay, and up to 100~ms was judged acceptable \cite{nankaku2022}. For
-vehicles the
-effects appear later: performance in simulated path following first
-degraded between
-200 and 300~ms \cite{chen2025delay}, and a review places degradation
-above 300~ms
-\cite{kamtam2024}; an earlier review gives 170~ms as the shortest delay found to
-degrade simulated driving, and stresses that the threshold depends on the task
-\cite{chen2007}. In a driving simulator with 28 untrained drivers,
-300~ms of added
-delay lowered speed and raised steering effort and workload in a slalom, 600~ms
-degraded lane keeping, and neither changed parking
-\cite{neumeier2019}. For underwater
-vehicles we found only impressions. One
-experienced operator of a vehicle of the class considered here found that it
-remained controllable up to about 100~ms of added delay and lost
-precision work at
-500~ms \cite{bauer2025}; users steering an underwater robot over an
-optical link, on
-which the age of the last valid command averaged 51~ms and no video
-was sent, could
-not tell
-it from a tether \cite{doniec2010}; and there is an estimate of 1~s
-of video latency,
-against 200~ms of
-control latency, in the operation of marine vehicles from a remote
-control room over
-a mobile network \cite{vasilijevic2023}.
-The delay removed in Section~\ref{sec:transport} is thus of a size
-that matters for
-fine, visually guided work elsewhere; we found no controlled study of
-its effect on
-piloting an ROV. Without a tether, commands over an acoustic link took 2 to 3~s
-\cite{ferraresso2026} and video reached 1 to 2 frames per second
-\cite{mishra2024},
-so that the tether remains the channel for piloted work \cite{quattrini2023}.
-
-\emph{Where delay arises.} For a small ROV observed through a network
-camera, the
-delay from scene to display was 850 to 870~ms with H.264 on a local
-network whose
-transport took 1.5 to 1.7~ms, and about 500~ms with MJPEG, on which the authors
-recommend cameras of low compression \cite{kaknjo2018}; two relays in the path
-brought H.264 above 1~s \cite{kaknjo2019}. A chain instrumented stage
-by stage shows
-that the codec need not cost this: at 640$\times$480, with x264
-coding every frame
-independently, encoding took 0.88~ms, the network 0.02~ms and
-decoding 0.27~ms of
-19.67~ms from scene to display, more than half of which belonged to
-the camera and
-the display \cite{bachhuber2018}; at 2560$\times$720, x264 encoded in
-3.78~ms, faster
-than an embedded hardware encoder at its default clock \cite{lv2026}.
-A teleoperated
-car tuned stage by stage reached 78~ms from scene to display on a
-local network at
-1920$\times$800 and 55 frames per second, of which all processing took less than
-15~ms, and exchanging the monitor alone moved the total between 48 and 116~ms
-\cite{georg2020}. Nine cameras delayed their output by 2 to 82~ms
-after the end of
-exposure, most of them by one to three frames \cite{ubik2021}. Pipelines left
-at their defaults nevertheless report 61 to 68~ms between encoder
-input and decoder
-output at 480 lines \cite{green2021}, about 62~ms \cite{khalil2026}, and from
-scene to display 104~ms \cite{schimpe2022}, 163~ms with the hardware
-encoder of a
-Raspberry Pi \cite{jennehag2016} and 202~ms \cite{testouri2025}, each without
-attribution to a stage. Where such a delay was attributed, it was to a buffer: a
-pipeline of x264 and RTP delivered 1920$\times$1080 video from a
-drone over a mobile
-network within 200~ms of encoding, about 150~ms of it in the receiver's jitter
-buffer \cite{baltaci2022}, which the decoder input of
-Table~\ref{tab:transport} does
-without. The 70~ms from which Table~\ref{tab:latency} starts is of
-the order of the
-unattributed figures.
-
-\emph{Encoder and decoder.} The delays of the encoder are documented. The
-zero-latency tuning of x264 reduced the delay through one 4K chain from 41 to 82
-frames to 7 \cite{arunruangsirilert2025}, and is used with RTP in teleoperated
-driving \cite{schimpe2021}; periodic keyframes at a constant bit rate
-make frames
-wait in the rate buffer, which refreshing the picture in columns avoids
-\cite{schreier2006}. An analysis of the coding modes of H.264 finds that, in an
-optimized system, the stream buffers of the encoder and the decoder
-at a constant
-bit rate are the largest delay: above six frame periods with a
-keyframe every twelve
-frames at low bit rates, against 0.2 to 0.4 of a frame period with
-such a refresh
-\cite{schreier2008}. That analysis concerns a channel of constant
-rate. The settings
-of Table~\ref{tab:transport} use periodic keyframes, and the packets
-of each frame
-are sent as they are encoded into a tether of far greater capacity
-than the stream
-(80~Mbit/s over 100~m was reported for the same tether interface
-\cite{manzanilla2019}), so that a keyframe is not spread over the
-frames that follow it.
-The same analysis
-observes that software codecs process whole frames, which adds delay
-\cite{schreier2008}. Less is written about the receiver. A decoder
-generally begins a
-frame only when
-all of it has arrived \cite{schreier2006}; decoding several frames in
-parallel raises
-the frame rate without shortening the delay of a frame
-\cite{chi2012}, and in FFmpeg
-delays the output by a frame for every thread beyond the first
-\cite{ffmpegmt}. In
-the work we read, that delay is not measured, and the wait of a
-parser for the start
-of the next frame, which Section~\ref{sec:transport} removes with a
-delimiter, is not
-reported; the nearest account leaves the interval between the sender and the
-decoder's input unresolved \cite{lv2026}, and another suspects the receiver's
-pipeline of a delay near 1~s without locating it \cite{baltaci2022}.
-
-\emph{Measurement.} The delay from scene to display is measured with
-a light in the
-camera's view and a photosensor on the display, to 0.5~ms
-\cite{bachhuber2016,georg2020}, or by
-filming a displayed timestamp beside its transmitted copy
-\cite{wei2013}. A timestamp
-written into the pixels before encoding and read after decoding
+In a pointing task a lag of 75~ms lengthened movement times measurably
+\cite{mackenzie1993}, and in telesurgery a delay of 70~ms lengthened all four
+manipulation tasks significantly \cite{nankaku2022}; for vehicles, reviews place
+the onset of degradation between 170~ms and above 300~ms, depending on the task
+\cite{chen2007,kamtam2024}. For underwater vehicles we found only impressions:
+one experienced operator of a vehicle of the class considered here found that it
+remained controllable up to about 100~ms of added delay and lost precision work
+at 500~ms \cite{bauer2025}. For a small ROV observed through a network camera,
+the delay from scene to display was 850 to 870~ms with H.264
+\cite{kaknjo2018}, yet a chain instrumented stage by stage at 640$\times$480
+spent 0.88~ms encoding, 0.02~ms on the network and 0.27~ms decoding of 19.67~ms
+from scene to display \cite{bachhuber2018}. Pipelines left at their defaults
+report 61 to 202~ms between encoder and decoder or from scene to display, each
+without attribution to a stage
+\cite{green2021,khalil2026,schimpe2022,jennehag2016,testouri2025}; where such a
+delay was attributed, it was to a buffer, about 150~ms of 200~ms in the
+receiver's jitter buffer \cite{baltaci2022}. The delays of the encoder are
+documented: the zero-latency tuning of x264 reduced the delay through one 4K
+chain from 41 to 82 frames to 7 \cite{arunruangsirilert2025}, and at a constant
+bit rate the stream buffers of the encoder and the decoder are the largest delay
+\cite{schreier2006,schreier2008}. Less is written about the receiver: a decoder
+generally begins a frame only when all of it has arrived \cite{schreier2006},
+and decoding several frames in parallel raises the frame rate without shortening
+the delay of a frame \cite{chi2012} and in FFmpeg delays the output by a frame
+for every thread beyond the first \cite{ffmpegmt}. In the work we read, that
+delay is not measured, and the wait of a parser for the start of the next frame,
+which Section~\ref{sec:transport} removes with a delimiter, is not reported. A
+timestamp written into the pixels before encoding and read after decoding
 \cite{green2021,khalil2026,baltaci2022}, the method of
-Section~\ref{sec:verification}, needs no second camera and resolves
-single frames,
-but leaves out the display and the camera, whose delay after exposure
-alone was 2 to
-82~ms in the cameras of \cite{ubik2021}; the optical methods include both. The
-figures of
-Table~\ref{tab:latency} are therefore the transport's share of what
-the pilot sees.
+Section~\ref{sec:verification}, resolves single frames but leaves out the camera
+and the display, which optical methods include \cite{bachhuber2016,georg2020};
+the figures of Table~\ref{tab:latency} are therefore the transport's share of
+what the pilot sees.
 
 \subsection{Vehicle software and the transport of frames}\label{sec:rw-software}
 
-\emph{Vehicles.} The low-cost vehicles built on the BlueROV2 share one
-architecture: an autopilot, a Raspberry Pi companion computer and an
-Ethernet tether
-to a topside computer
-\cite{vonbenzon2022,willners2021,edge2020,wilby2020,manzanilla2019}.
-Those that add
-perception either add computers, one of them with a graphics
-processor, and are built
-on ROS or ROS~2 \cite{willners2021,edge2020,wilby2020,fernandez2026},
-or send the
-video to the surface and process it there
-\cite{manzanilla2019,akram2022,akram2025,alinei2024}; one shares the companion
-computer's desktop instead of sending a video stream \cite{aguirre2019}. In
-\cite{manzanilla2019} a 640$\times$480 stream at 15 frames per second feeds the
-localization and the controller at the surface, and moving the
-computation into the
-vehicle is named as work in progress. Classical operators remain the
-first stage of
-such perception: adaptive histogram equalization, Canny edges and a
-Hough transform
-for net inspection \cite{akram2022}, and a Sobel gradient as a cue of
-distance, for
-which the dependence on the link to the topside is named as a weakness
-\cite{akram2025}. None of these reports what it costs to move a frame from one
-process to another, nor compares the same operators on the vehicle and at the
-surface.
-
-\emph{Middleware.} The frameworks used on marine vehicles exchange messages:
-between peers in ROS \cite{quigley2009}, over UDP multicast in LCM
-\cite{huang2010lcm}, through DDS in ROS~2 \cite{macenski2022}, through a central
-server, with no communication between peers, in MOOS
-\cite{benjamin2010}, and as IMC
-messages in the LSTS toolchain, in which the tasks of DUNE are threads on a bus
-within one process and UDP or TCP carries the messages beyond it
-\cite{martins2009,pinto2013}. A MOOS message as described in \cite{benjamin2010}
-holds a string or a number, so that a frame is not a message at all. MOOS was
-designed for the independent development and reuse of modules
-\cite{benjamin2010},
-and IMC and its toolchain for vehicles that interact over limited acoustic and
-wireless links \cite{martins2009,pinto2013}; a survey of such
-architectures has no
-criterion for camera data \cite{li2016survey}. Goby3 passes data
-without copying,
-but only between the threads of one process \cite{schneider2016}, and
-the framework
-of COLA2 offers shared memory beside TCP/IP for communication between its
-components, without reporting its layout or its cost
-\cite{palomeras2012}. The cost
-has been measured outside the marine field. Latency between processes
-is constant up
-to 64~KB, where messages begin to be fragmented, and then rises with
-the size of the
-message and the number of subscribers \cite{maruyama2016,kronauer2021}, and the
-designers of ROS~2 state that its default transport is not effective
-above 1~MB, the
-sizes of images \cite{macenski2022}. On a Raspberry Pi~4, about 30\% of 500~KB
-messages were lost \cite{kronauer2021}, and a 640$\times$480 colour
-image could not
-be passed between two processes at 20~Hz \cite{macenski2023}. Removing the
-serialization alone, with the socket kept, lowered the latency of a 6~MB image
-between two ROS processes by 76\%, at the price of generated message
-classes and a
-rewriting of the source \cite{wang2022rossf}.
-
-\emph{Shared memory} removes the copy through the kernel, and each published
-transport does so at a price. TZC places the bulk of a message in
-shared memory and
-sends the remainder over a socket, and needs generated message types
-\cite{wang2019tzc}; the transport of \cite{iordache2021}, with a
-median latency of
-235~$\mu$s for images of any size, synchronizes with mutexes and
-condition variables
-shared between processes; Agnocast needs a kernel module \cite{ishikawa2025}; a
-transport that shares memory but still serializes took close to 1~ms for a 4~MB
-camera message \cite{wu2021}; and the remedy recommended for ROS~2 is
-to compose all
-nodes into one process \cite{macenski2022,macenski2023}, which gives up their
-isolation and the choice of language. iceoryx passes between
-processes a pointer to
-a segment taken from a pool allocated beforehand, and its latency on a Raspberry
-Pi~4 stayed at 3.5~$\mu$s whatever the size of the message, where a
-socket needed a
-millisecond for 1~MiB; it needs the sizes of messages in advance, and its
-subscribers write reference counts into the shared memory \cite{pohnl2023}. The
-frame bus of Section~\ref{sec:bus} is a mapped file with a documented
-layout, and
-has none of these dependencies. It is not free of copies: the writer
-copies a frame
-into a slot, in 34.9~$\mu$s at 1280$\times$720 (Table~\ref{tab:costs}), and each
-reader copies it out, which the designers of iceoryx reject for
-messages of 10~MiB
-\cite{pohnl2023}; in exchange a reader holds nothing in the shared
-file and writes
-nothing to it.
-
-The reader of the frame bus, which copies a slot and repeats the copy
-if the slot's
-counter changed, follows the scheme of \cite{lamport1977}, in which a
-writer never
-waits for readers. The scheme is known as the sequence lock in Linux
+The low-cost vehicles built on the BlueROV2 share one architecture: an
+autopilot, a Raspberry Pi companion computer and an Ethernet tether to a topside
+computer \cite{vonbenzon2022,willners2021,edge2020,wilby2020,manzanilla2019}.
+Those that add perception either add computers and are built on ROS or ROS~2
+\cite{willners2021,edge2020,wilby2020,fernandez2026}, or send the video to the
+surface and process it there
+\cite{manzanilla2019,akram2022,akram2025,alinei2024}; none of them reports what
+it costs to move a frame from one process to another. The frameworks used on
+marine vehicles exchange messages
+\cite{quigley2009,huang2010lcm,macenski2022,benjamin2010,martins2009,pinto2013},
+and the cost of an image as a message has been measured outside the marine
+field: the designers of ROS~2 state that its default transport is not effective
+above 1~MB \cite{macenski2022}, and on a Raspberry Pi~4 a 640$\times$480 colour
+image could not be passed between two processes at 20~Hz \cite{macenski2023}.
+Transports through shared memory remove the copy through the kernel, each at a
+price: generated message types \cite{wang2019tzc}, mutexes and condition
+variables shared between processes \cite{iordache2021}, a kernel module
+\cite{ishikawa2025}, or, in iceoryx, sizes of messages known in advance and
+subscribers that write reference counts into the shared memory
+\cite{pohnl2023}. The frame bus of Section~\ref{sec:bus} is a mapped file with a
+documented layout and none of these dependencies, and pays instead a copy of
+each frame on each side. Its reader follows the scheme of \cite{lamport1977}, in
+which a writer never waits for readers, known as the sequence lock in Linux
 \cite{boehm2012} and as the non-blocking write protocol in real-time systems
-\cite{kopetz1993,kim2006}. That protocol has a form with several
-buffers written in
-turn, of which the reader takes the newest complete one and repeats
-its read only if
-the writer has come round to the buffer being read \cite{kopetz1993};
-the frame bus
-is this form with four buffers and a counter in each, so that a copy
-is repeated only
-if it lasts about three frame periods. The number of repetitions is
-bounded there
-only if a minimum interval between writes is known and the time for
-which a reader
-can be preempted is limited \cite{kopetz1993}, neither of which Linux
-guarantees: the
-bus has the mechanism of the protocol and not its bound. The hazard
-of such readers,
-acting on a pointer read during a write \cite{leis2019}, does not
-arise for readers
-that only copy pixels. The bus is not Simpson's four-slot mechanism,
-although it has
-four slots per stream: there the reader never repeats but writes a
-control variable
-that the writer reads \cite{rushby2002}, whereas the writer of the frame bus
-observes nothing of its readers. Readers sleep on a futex
-\cite{franke2002,drepper2011}. A ring whose producer waits for its consumers
-\cite{thompson2011} suits messages that must not be lost; a camera
-frame is a state
-message, of which a new version overwrites the old and which readers
-do not consume
-\cite{kopetz1993}. iceoryx by default likewise discards the oldest
-sample of a slow
-subscriber, and notes that a recorder must learn of every loss \cite{pohnl2023},
-which a reader of the frame bus can tell from the frame numbers.
-
-\emph{Operators and their verification.} On ARM processors, NEON implementations
-were 3.1 times as fast as the same library without them for the Sobel
-operator, 4.6 for the Gaussian
-blur and 1.6 for the Canny detector \cite{pulli2012}, and 1.9 to 4.8
-times across 59
-kernels, of which the compiler's own vectorization improved 23 and left table
-look-ups scalar \cite{khadem2023}. Against one compiler's own
-vectorization of the
-same library, NEON written by hand was 1.07 to 2.28 times as fast for
-thresholding,
-the Gaussian blur and the Sobel filter on images of 8 megapixels across six ARM
-platforms \cite{mitra2013}. The finding on tables is a reason to
-compose consecutive
-point operators into one table (Section~\ref{sec:operators}). A domain-specific
-language can schedule such pipelines instead \cite{ragankelley2013},
-at the cost of a
-dependency. None of these sources requires the vector and threaded paths to
-reproduce the scalar output exactly, and they need not agree: of 58
-pairs of scalar
-and vector routines of one widely used library that were checked
-symbolically, 41
-were proved equivalent up to a bounded image size and 10 differed
-\cite{collingbourne2011}. The equivalence checks of
-Section~\ref{sec:verification}
-complement such proofs with whole frames on three architectures, two
-of them under
-emulation \cite{bellard2005}, which tests the emulator's rendering of the
-instructions and not the processor itself. A run under AddressSanitizer
-\cite{serebryany2012} shows the absence of the errors it instruments
-for the inputs
-that were run.
+\cite{kopetz1993}; the bus is that protocol's form with several buffers, with
+four, but has not its bound on the reader's repetitions, which rests on
+guarantees of timing that Linux does not give. For the operators, NEON
+implementations on ARM were 1.6 to 4.8 times as fast as the same code without
+them, and the compiler's own vectorization left table look-ups scalar
+\cite{pulli2012,khadem2023}, which is a reason to compose consecutive point
+operators into one table (Section~\ref{sec:operators}). None of these sources
+requires the vector and threaded paths to reproduce the scalar output exactly,
+and of 58 pairs of scalar and vector routines of one widely used library that
+were checked symbolically, 10 differed \cite{collingbourne2011}.
