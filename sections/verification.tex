@@ -46,6 +46,29 @@ counts under QEMU
 with an instruction-counting plugin, which reflects the work but not the memory
 behaviour of a Raspberry Pi.
 
+The visibility correction was compared with other methods on the 890
+underwater photographs of \cite{li2020uieb}. Each has a reference picture,
+which is the output that observers preferred among those of twelve methods and
+not a ground truth. Each photograph was converted to \eeye{}'s frame format
+(planar 4:2:2, full range), passed through the image statistics and the
+correction as the first frame of a video, for which the filter of
+Eq.~\eqref{eq:smooth} starts at its targets, and converted back; a program
+that links the same source files as \eeye{} does this from a file. The methods
+compared were contrast-limited adaptive histogram equalization of the lightness
+\cite{zuiderveld1994} (clip limit 2, 8$\times$8 tiles), a grey-world white
+balance \cite{buchsbaum1980}, the two in sequence, and histogram equalization of
+the luma, all as implemented in OpenCV~5.1 \cite{pulli2012}; and colour balance
+and fusion \cite{ancuti2018} and the underwater dark channel prior
+\cite{drews2013}, for which we found no code from their authors and wrote
+implementations from the papers. Each output was scored against its reference by
+the peak signal-to-noise ratio and the structural similarity \cite{wang2004},
+and by the number of ORB keypoints \cite{rublee2011} detected of 2000 requested,
+as a measure of what a feature-based vision task could use. UIQM and UCIQE were
+computed as well, as the implementations in common use compute them, since they
+are customary. Times are the minimum of three runs (five for the correction) on
+the laptop named below with 12 threads, at each photograph's own size, and are
+reported for the 105 photographs of 1280$\times$720.
+
 The cost of a running installation is measured from outside by a command of
 \hellion{} that follows every \eeye{} and \hellion{} process on the
 machine and the

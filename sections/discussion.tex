@@ -84,12 +84,26 @@ from a model that
 is itself a simplification \cite{akkaynak2018}, a practice with known weaknesses
 \cite{berman2020}; the constants of Table~\ref{tab:autovis} were set
 on such frames
-and a laptop camera and will change on footage from the vehicle. We
-did not score
-the correction with the no-reference measures in common use, which
-its stretch and
-saturation gain would raise by construction
-(Section~\ref{sec:rw-enhancement}). Since
+and a laptop camera and will change on footage from the vehicle.
+
+On photographs from the water the correction came closer to the pictures that
+observers preferred than the other methods of its cost did, and closer than our
+implementations of two methods that cost a hundred to several hundred times as
+much (Table~\ref{tab:uieb}). We read this with three reservations. The
+references were chosen among the outputs of twelve methods, so that a method
+scores well by resembling what those methods produce, and a correction that
+stretches contrast and removes a cast moderately is of that kind; the grey-world
+balance and the dark channel prior, which change colour most, lay furthest from
+them. Fusion and the dark channel prior are our implementations and have not
+been checked against their authors' results. And photographs do not test what
+the correction adds to its class, the filter on its parameters, since each is
+the first frame of a video; flicker and lag remain evaluated on synthetic
+sequences only. The no-reference measures ranked first two methods that lay
+further from the references in signal-to-noise ratio than the unprocessed
+photographs, in agreement with the criticisms of those measures (Section~\ref{sec:rw-enhancement}); we report them
+in Table~\ref{tab:uieb} and do not argue from them. The correction lowered the
+signal-to-noise ratio of a quarter of the photographs, which we have not yet
+examined one by one. Since
 unprocessed pictures serve object detectors best \cite{wang2024detectors}, the
 correction is applied to the pilot's picture alone and the camera's frame is
 published unaltered beside it.
@@ -148,8 +162,9 @@ a laptop's. The equivalence checks were run under emulation for both ARM
 targets, and an emulator tests its own rendering of the instructions;
 only the test
 suites have run on an AArch64 processor. The visibility
-correction has been evaluated on synthetic frames, and no pilot has
-flown with it.
+correction has been evaluated on synthetic frames and on still photographs,
+against two baselines of our own implementation, and not on video from the
+water; no pilot has flown with it.
 The next steps are accordingly the vehicle itself: the costs and the
 latency on its
 processor and across its tether, the delay of its camera and of the

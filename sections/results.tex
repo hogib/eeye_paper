@@ -1,7 +1,8 @@
 \section{Results}\label{sec:results}
 
 All results are from the bench: desktop and laptop computers, a laptop camera,
-synthetic frames, loopback and a local network, and for the ARM
+synthetic frames, a public set of underwater photographs, loopback and a local
+network, and for the ARM
 builds emulation, a
 continuous-integration runner and one Raspberry Pi~5. None is from the vehicle.
 
@@ -41,6 +42,63 @@ threads and 2.09~ms on one (Table~\ref{tab:costs}).
     transmission of
   0.25 and recover only partly.}\label{fig:autovis}
 \end{figure}
+
+\subsection{Comparison on underwater photographs}\label{sec:res-uieb}
+
+Table~\ref{tab:uieb} compares the correction with six other methods on the 890
+photographs of \cite{li2020uieb}. The correction came closest to the reference
+pictures by both measures: 19.84~dB and a structural similarity of 0.874,
+against 17.36~dB and 0.767 for the unprocessed photographs. It raised the
+signal-to-noise ratio of 664 photographs (74.6\%), by 3.5~dB at the median, and
+the structural similarity of 696 (78.2\%), and of the seven methods it was the
+closest to the reference for 541 photographs by the first measure and for 424
+by the second. Adaptive histogram equalization was second in signal-to-noise
+ratio (17.65~dB) and fusion in structural similarity (0.830). The grey-world
+balance, alone or followed by the equalization, the global equalization, fusion
+and the dark channel prior all lay further from the references in
+signal-to-noise ratio than the unprocessed photographs did.
+
+The correction left 1881 keypoints of the 2000 requested, against 1564 in the
+unprocessed photographs; adaptive and global equalization left as many (1871 and
+1895). The no-reference measures ordered the methods differently from the
+references and from each other: UCIQE placed the dark channel prior first and
+the global equalization second, and UIQM placed fusion first, all three of
+which lay further from the references in signal-to-noise ratio than the
+unprocessed photographs.
+
+At 1280$\times$720 the correction took 0.57~ms on the laptop, the global
+equalization 1.04~ms, the grey-world balance 1.08~ms, the adaptive equalization
+3.11~ms and the two in sequence 4.32~ms. Our implementations of fusion and of
+the dark channel prior took 313 and 50~ms; they are not optimized, and these
+times say nothing of what the methods need.
+
+\begin{table*}[!t]
+  \centering\small
+  \caption{The visibility correction and six other methods on the 890
+    photographs of \cite{li2020uieb}; means over the photographs. PSNR and SSIM
+    are against the reference pictures. Time per 1280$\times$720 photograph
+    (105 of the 890), AMD Ryzen~5 5600H, 12 threads.}\label{tab:uieb}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}L{6.4cm}cccccc@{}}
+    \toprule
+    Method & PSNR (dB) & SSIM & Keypoints & UCIQE & UIQM & Time (ms) \\
+    \midrule
+    Unprocessed & 17.36 & 0.767 & 1564 & 0.265 & 2.30 & -- \\
+    Visibility correction (\eeye{}) & 19.84 & 0.874 & 1881 & 0.325 & 2.72 & 0.57 \\
+    Adaptive histogram equalization & 17.65 & 0.820 & 1871 & 0.297 & 2.39 & 3.11 \\
+    Grey-world balance & 13.45 & 0.624 & 1208 & 0.198 & 2.07 & 1.08 \\
+    Grey-world, then adaptive equalization & 15.53 & 0.780 & 1694 & 0.236 & 2.57 & 4.32 \\
+    Histogram equalization & 16.00 & 0.768 & 1895 & 0.347 & 2.21 & 1.04 \\
+    Fusion \cite{ancuti2018} & 15.64 & 0.830 & 1842 & 0.249 & 2.84 & 313 \\
+    Dark channel prior \cite{drews2013} & 12.65 & 0.623 & 1788 & 0.435 & 1.92 & 50 \\
+    \bottomrule
+  \end{tabular}
+  \tablenote{The unprocessed photographs were passed through \eeye{}'s 4:2:2
+    frame format and back, as the correction's were. Fusion and the dark channel
+    prior are our implementations from the papers and are not optimized.
+    Keypoints: ORB, of 2000 requested. The reference pictures are the
+    preferences of observers among the outputs of twelve methods.}
+\end{table*}
 
 \subsection{Transport latency}\label{sec:res-latency}
 

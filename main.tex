@@ -124,7 +124,10 @@ Remotely Operated Underwater Vehicles}
   transport latency from bus to bus over loopback from 70.4 to 3.8~ms at
   640$\times$480 and from 74.8 to 8.3~ms at 1280$\times$720. The
   visibility correction
-  costs 0.55~ms per 1280$\times$720 frame on four desktop threads.
+  costs 0.55~ms per 1280$\times$720 frame on four desktop threads. On the 890
+  photographs of a public benchmark it came closer to the reference pictures
+  than six other methods, among them contrast-limited adaptive histogram
+  equalization (19.8 against 17.6~dB).
   Output-preserving
   optimizations were checked byte for byte against the previous code on
   x86-64 and, under emulation, on ARMv7 and AArch64. The software has
