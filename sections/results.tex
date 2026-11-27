@@ -51,25 +51,38 @@ pictures by both measures: 19.84~dB and a structural similarity of 0.874,
 against 17.36~dB and 0.767 for the unprocessed photographs. It raised the
 signal-to-noise ratio of 664 photographs (74.6\%), by 3.5~dB at the median, and
 the structural similarity of 696 (78.2\%), and of the seven methods it was the
-closest to the reference for 541 photographs by the first measure and for 424
-by the second. Adaptive histogram equalization was second in signal-to-noise
-ratio (17.65~dB) and fusion in structural similarity (0.830). The grey-world
-balance, alone or followed by the equalization, the global equalization, fusion
-and the dark channel prior all lay further from the references in
-signal-to-noise ratio than the unprocessed photographs did.
+closest to the reference for 519 photographs by the first measure and for 383
+by the second. Adaptive histogram equalization and fusion followed in
+signal-to-noise ratio (17.65 and 17.53~dB), and fusion was second in structural
+similarity (0.847); it raised the structural similarity of more photographs than
+the correction did (722 against 696), by less. The grey-world balance, alone or
+followed by the equalization, the global equalization and the dark channel prior
+lay further from the references in signal-to-noise ratio than the unprocessed
+photographs did.
+
+Two of the methods are our implementations. For the dark channel prior,
+\cite{li2020uieb} report 11.03~dB and a structural similarity of 0.500 on the
+same photographs with its authors' code; ours gave 11.20~dB and 0.541. For
+fusion we found no such figure. Its paper leaves open the exponent of the gamma
+correction and the reach of the stretch in its sharpening; over exponents of
+1.2, 1.5 and 2 and a stretch to the full range or between the 1st and 99th
+percentiles, on every fifteenth photograph, its signal-to-noise ratio ranged
+from 14.3 to 16.7~dB and its structural similarity from 0.740 to 0.828, against
+19.2~dB and 0.868 for the correction on the same 60. Table~\ref{tab:uieb} gives
+fusion at the setting that came closest to the references.
 
 The correction left 1881 keypoints of the 2000 requested, against 1564 in the
 unprocessed photographs; adaptive and global equalization left as many (1871 and
 1895). The no-reference measures ordered the methods differently from the
 references and from each other: UCIQE placed the dark channel prior first and
-the global equalization second, and UIQM placed fusion first, all three of
-which lay further from the references in signal-to-noise ratio than the
-unprocessed photographs.
+the global equalization second, both of which lay further from the references
+in signal-to-noise ratio than the unprocessed photographs, and UIQM placed
+fusion first.
 
 At 1280$\times$720 the correction took 0.57~ms on the laptop, the global
 equalization 1.04~ms, the grey-world balance 1.08~ms, the adaptive equalization
 3.11~ms and the two in sequence 4.32~ms. Our implementations of fusion and of
-the dark channel prior took 313 and 50~ms; they are not optimized, and these
+the dark channel prior took 313 and 47~ms; they are not optimized, and these
 times say nothing of what the methods need.
 
 \begin{table*}[!t]
@@ -89,13 +102,15 @@ times say nothing of what the methods need.
     Grey-world balance & 13.45 & 0.624 & 1208 & 0.198 & 2.07 & 1.08 \\
     Grey-world, then adaptive equalization & 15.53 & 0.780 & 1694 & 0.236 & 2.57 & 4.32 \\
     Histogram equalization & 16.00 & 0.768 & 1895 & 0.347 & 2.21 & 1.04 \\
-    Fusion \cite{ancuti2018} & 15.64 & 0.830 & 1842 & 0.249 & 2.84 & 313 \\
-    Dark channel prior \cite{drews2013} & 12.65 & 0.623 & 1788 & 0.435 & 1.92 & 50 \\
+    Fusion \cite{ancuti2018} & 17.53 & 0.847 & 1837 & 0.237 & 2.86 & 313 \\
+    Dark channel prior \cite{drews2013} & 11.20 & 0.541 & 1757 & 0.497 & 1.72 & 47 \\
     \bottomrule
   \end{tabular}
   \tablenote{The unprocessed photographs were passed through \eeye{}'s 4:2:2
     frame format and back, as the correction's were. Fusion and the dark channel
-    prior are our implementations from the papers and are not optimized.
+    prior are our implementations from the papers and are not optimized;
+    fusion with a gamma of 1.2 and a stretch between the 1st and 99th
+    percentiles.
     Keypoints: ORB, of 2000 requested. The reference pictures are the
     preferences of observers among the outputs of twelve methods.}
 \end{table*}

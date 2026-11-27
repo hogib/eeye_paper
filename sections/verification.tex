@@ -59,8 +59,14 @@ compared were contrast-limited adaptive histogram equalization of the lightness
 balance \cite{buchsbaum1980}, the two in sequence, and histogram equalization of
 the luma, all as implemented in OpenCV~5.1 \cite{pulli2012}; and colour balance
 and fusion \cite{ancuti2018} and the underwater dark channel prior
-\cite{drews2013}, for which we found no code from their authors and wrote
-implementations from the papers. Each output was scored against its reference by
+\cite{drews2013}, for which we found no public code from their authors and wrote
+implementations from the papers. The dark channel prior follows the
+transmission estimate of \cite{drews2013} with a guided filter in place of
+matting and a lower bound of 0.1 on the transmission. Fusion follows
+\cite{ancuti2018} with a gamma of 1.2, a Gaussian of standard deviation 20 in
+the sharpening and its stretch taken between the 1st and 99th percentiles,
+which the paper does not fix; of the settings tried on every fifteenth
+photograph these came closest to the references. Each output was scored against its reference by
 the peak signal-to-noise ratio and the structural similarity \cite{wang2004},
 and by the number of ORB keypoints \cite{rublee2011} detected of 2000 requested,
 as a measure of what a feature-based vision task could use. UIQM and UCIQE were
